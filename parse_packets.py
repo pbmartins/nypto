@@ -3,11 +3,11 @@ import pyshark
 import argparse
 
 INFILE_PATH = 'miner.pcapng'
-OUTFILE_PATH = 'mining_4t.dat'
-SAMPLE_DELTA = 1
+OUTFILE_PATH = 'mining_4t_nicehash.dat'
+SAMPLE_DELTA = 0.5
 
 LOCAL_IP = '192.168.1.158'
-REMOTE_MINER_IP = '159.122.29.199'
+REMOTE_MINER_PORT = 3333
 
 def save_to_file(delta, last_up, last_down):
         global OUTFILE_PATH
@@ -28,9 +28,11 @@ def process_packets(tcp_cap):
 
     for packet in tcp_cap:
         packet_type = -1
-        if packet.ip.src == LOCAL_IP and packet.ip.dst == REMOTE_MINER_IP:
+        if packet.ip.src == LOCAL_IP and \
+                packet.tcp.tcp.get_field('DstPort') == REMOTE_MINER_IP:
             packet_type = 0
-        elif packet.ip.src == REMOTE_MINER_IP and packet.ip.dst == LOCAL_IP:
+        elif packet.tcp.get_field('SrcPort') == REMOTE_MINER_IP and \
+                packet.ip.dst == LOCAL_IP:
             packet_type = 1
 
         if packet_type == 0:
