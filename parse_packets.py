@@ -7,61 +7,73 @@ OUTFILE_PATH = 'mining_4t_nicehash.dat'
 SAMPLE_DELTA = 0.5
 
 LOCAL_IP = '192.168.1.158'
-REMOTE_MINER_PORT = 3333
+REMOTE_MINER_PORT = 3341
 
-def save_to_file(delta, last_up, last_down):
+def save_to_file(delta, last_bytes_up, last_bytes_down,
+        last_npkts_up, last_npkts_down):
         global OUTFILE_PATH
 
         # Save to file
         with open(OUTFILE_PATH, "a") as f:
-            f.write("{} {}\n".format(last_up, last_down))
+            f.write("{} {} {} {}\n".format(last_bytes_up, last_bytes_down,
+                last_npkts_up, last_npkts_down))
             for i in range(int(delta) - 1):
-                f.write("0 0\n");
+                f.write("0 0 0 0\n");
 
 
 def process_packets(tcp_cap):
     global SAMPLE_DELTA
     
     last_timestamp = None
-    last_up = 0
-    last_down = 0
+    last_bytes_up = 0
+    last_bytes_down = 0
+    last_npkts_up = 0
+    last_npkts_down = 0
 
     for packet in tcp_cap:
         packet_type = -1
         if packet.ip.src == LOCAL_IP and \
-                packet.tcp.tcp.get_field('DstPort') == REMOTE_MINER_IP:
+                int(packet.tcp.get_field('DstPort')) == REMOTE_MINER_PORT:
             packet_type = 0
-        elif packet.tcp.get_field('SrcPort') == REMOTE_MINER_IP and \
+        elif int(packet.tcp.get_field('SrcPort')) == REMOTE_MINER_PORT and \
                 packet.ip.dst == LOCAL_IP:
             packet_type = 1
 
         if packet_type == 0:
             if last_timestamp is None:
                 last_timestamp = float(packet.sniff_timestamp)
-                last_down += int(packet.length)
+                last_bytes_down += int(packet.length)
+                last_npkts_down += 1
             else:
                 time_delta = float(packet.sniff_timestamp) - last_timestamp
                 if time_delta > SAMPLE_DELTA:
-                    save_to_file(time_delta, last_up, last_down)
+                    save_to_file(time_delta, last_bytes_up, last_bytes_down,
+                            last_npkts_up, last_npkts_down)
                     last_timestamp = float(packet.sniff_timestamp)
-                    last_down = int(packet.length)
+                    last_bytes_down = int(packet.length)
+                    last_npkts_down = 1
                 else:
-                    last_down += int(packet.length)
+                    last_bytes_down += int(packet.length)
+                    last_npkts_down += 1
         elif packet_type == 1:
             if last_timestamp is None:
                 last_timestamp = float(packet.sniff_timestamp)
-                last_up += int(packet.length)
+                last_bytes_up += int(packet.length)
+                last_npkts_up += 1
             else:
                 time_delta = float(packet.sniff_timestamp) - last_timestamp
                 if time_delta > SAMPLE_DELTA:
-                    save_to_file(time_delta, last_up, last_down)
+                    save_to_file(time_delta, last_bytes_up, last_bytes_down,
+                            last_npkts_up, last_npkts_down)
                     last_timestamp = float(packet.sniff_timestamp)
-                    last_up = int(packet.length)
+                    last_bytes_up = int(packet.length)
+                    last_npkts_up = 1
                 else:
-                    last_up += int(packet.length)
+                    last_bytes_up += int(packet.length)
+                    last_npkts_up += 1
 
 
-    save_to_file(0, last_up, last_down)
+    save_to_file(0, last_bytes_up, last_bytes_down, last_npkts_up, last_npkts_down)
 
 
 def main():
