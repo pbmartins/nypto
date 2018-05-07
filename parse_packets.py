@@ -1,9 +1,10 @@
+import os
 import datetime
 import pyshark
 import argparse
 
 INFILE_PATH = 'miner.pcapng'
-OUTFILE_PATH = 'mining_4t_nicehash.dat'
+OUTFILE_PATH = 'datasets/mining_4t_nicehash.dat'
 SAMPLE_DELTA = 0.5
 
 LOCAL_IP = '192.168.1.158'
@@ -88,7 +89,7 @@ def process_packets(tcp_cap):
                     last_timestamp = float(packet.sniff_timestamp)
                     last_bytes_up = int(packet.tcp.get_field('Len'))
                     last_npkts_up = 1
-                    last_nsyns_up += 1 if packet.tcp.get_field(
+                    last_nsyns_up = 1 if packet.tcp.get_field(
                             'Flags').main_field.hex_value & 18 == 18 else 0
                 else:
                     last_bytes_up += int(packet.tcp.get_field('Len'))
@@ -126,6 +127,12 @@ def main():
     SAMPLE_DELTA = args.sampwindow if args.sampwindow is not None else SAMPLE_DELTA
     LOCAL_IP = args.ipv4 if args.ipv4 is not None else LOCAL_IP
     LOCAL_IPV6 = args.ipv6 if args.ipv6 is not None else LOCAL_IPV6
+
+    if os.path.exists(OUTFILE_PATH):
+        if input('Write over file? [y/N]') == 'y':
+            os.remove(OUTFILE_PATH)
+        else:
+            exit()
 
     tcp_cap = pyshark.FileCapture(
             INFILE_PATH, display_filter='tcp', keep_packets=False)
