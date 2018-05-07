@@ -8,7 +8,7 @@ SAMPLE_DELTA = 0.5
 
 LOCAL_IP = '192.168.1.158'
 LOCAL_IPV6 = '2001:8a0:de41:5501:9af7:5d3d:ed53:73dd'
-REMOTE_MINER_PORT = 3341
+REMOTE_PORTS = [3341, 3333, 80, 443]
 
 def save_to_file(delta, last_bytes_up, last_bytes_down,
         last_npkts_up, last_npkts_down, last_nsyns_up, last_nsyns_down):
@@ -44,11 +44,9 @@ def process_packets(tcp_cap):
             src = packet.ip.src
             dst = packet.ip.dst
 
-        if src == ip and \
-                int(packet.tcp.get_field('DstPort')) == REMOTE_MINER_PORT:
+        if src == ip and int(packet.tcp.get_field('DstPort')) in REMOTE_PORTS:
             packet_type = 0
-        elif int(packet.tcp.get_field('SrcPort')) == REMOTE_MINER_PORT and \
-                dst == ip:
+        elif int(packet.tcp.get_field('SrcPort')) in REMOTE_PORTS and dst == ip:
             packet_type = 1
 
         if packet_type == 0:
@@ -107,6 +105,8 @@ def main():
     global INFILE_PATH
     global OUTFILE_PATH
     global SAMPLE_DELTA
+    global LOCAL_IP
+    global LOCAL_IPV6
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input', nargs='?',
@@ -115,11 +115,17 @@ def main():
             help='output processed file')
     parser.add_argument('-w', '--sampwindow', nargs='?',
             help='sampling interval (default 0.5s)')
+    parser.add_argument('-4', '--ipv4', nargs='?',
+            help='IPv4 of the host machine')
+    parser.add_argument('-6', '--ipv6', nargs='?',
+            help='IPv6 of the host machine')
     args = parser.parse_args()
 
     INFILE_PATH = args.input if args.input is not None else INFILE_PATH
     OUTFILE_PATH = args.output if args.output is not None else OUTFILE_PATH
     SAMPLE_DELTA = args.sampwindow if args.sampwindow is not None else SAMPLE_DELTA
+    LOCAL_IP = args.ipv4 if args.ipv4 is not None else LOCAL_IP
+    LOCAL_IPV6 = args.ipv6 if args.ipv6 is not None else LOCAL_IPV6
 
     tcp_cap = pyshark.FileCapture(
             INFILE_PATH, display_filter='tcp', keep_packets=False)
