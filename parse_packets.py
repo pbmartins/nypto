@@ -11,6 +11,7 @@ LOCAL_IP = '192.168.1.158'
 LOCAL_IPV6 = '2001:8a0:de41:5501:9af7:5d3d:ed53:73dd'
 REMOTE_PORTS = [3341, 3333, 80, 443]
 
+
 def save_to_file(delta, last_bytes_up, last_bytes_down,
         last_npkts_up, last_npkts_down, last_nsyns_up, last_nsyns_down):
         global OUTFILE_PATH
@@ -20,12 +21,13 @@ def save_to_file(delta, last_bytes_up, last_bytes_down,
             f.write("{} {} {} {} {} {}\n".format(last_bytes_up, last_bytes_down,
                 last_npkts_up, last_npkts_down, last_nsyns_up, last_nsyns_down))
             for i in range(int(delta) - 1):
-                f.write("0 0 0 0 0 0\n");
+                f.write("0 0 0 0 0 0\n")
 
 
 def process_packets(tcp_cap):
     global SAMPLE_DELTA
-    
+
+    n_samples = 0
     last_timestamp = None
     last_bytes_up = 0
     last_bytes_down = 0
@@ -47,8 +49,13 @@ def process_packets(tcp_cap):
 
         if src == ip and int(packet.tcp.get_field('DstPort')) in REMOTE_PORTS:
             packet_type = 0
+            n_samples += 1
         elif int(packet.tcp.get_field('SrcPort')) in REMOTE_PORTS and dst == ip:
             packet_type = 1
+            n_samples += 1
+
+        if n_samples > 6000:
+            break
 
         if packet_type == 0:
             if last_timestamp is None:
@@ -96,7 +103,6 @@ def process_packets(tcp_cap):
                     last_npkts_up += 1
                     last_nsyns_up += 1 if packet.tcp.get_field(
                             'Flags').main_field.hex_value & 18 == 18 else 0
-
 
     save_to_file(0, last_bytes_up, last_bytes_down, last_npkts_up, 
             last_npkts_down, last_nsyns_up, last_nsyns_down)
