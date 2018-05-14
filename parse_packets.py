@@ -1,33 +1,43 @@
 import os
-import datetime
 import pyshark
 import argparse
 
 INFILE_PATH = 'miner.pcapng'
 OUTFILE_PATH = 'datasets/mining_4t_nicehash.dat'
 SAMPLE_DELTA = 0.5
+N_SAMPLES = 0
 
 LOCAL_IP = '192.168.1.158'
 LOCAL_IPV6 = '2001:8a0:de41:5501:9af7:5d3d:ed53:73dd'
-REMOTE_PORTS = [3341, 3333, 80, 443]
+REMOTE_PORTS = [3341, 3333, 3334, 3357, 80, 443]
 
 
 def save_to_file(delta, last_bytes_up, last_bytes_down,
         last_npkts_up, last_npkts_down, last_nsyns_up, last_nsyns_down):
         global OUTFILE_PATH
+        global N_SAMPLES
 
         # Save to file
+        if N_SAMPLES + 1 > 6000:
+            return
+
         with open(OUTFILE_PATH, "a") as f:
+            N_SAMPLES += 1
             f.write("{} {} {} {} {} {}\n".format(last_bytes_up, last_bytes_down,
                 last_npkts_up, last_npkts_down, last_nsyns_up, last_nsyns_down))
+
+            if N_SAMPLES + int(delta) > 6000:
+                delta = 6000 - N_SAMPLES
+
             for i in range(int(delta) - 1):
+                N_SAMPLES += 1
                 f.write("0 0 0 0 0 0\n")
 
 
 def process_packets(tcp_cap):
     global SAMPLE_DELTA
+    global N_SAMPLES
 
-    n_samples = 0
     last_timestamp = None
     last_bytes_up = 0
     last_bytes_down = 0
@@ -49,12 +59,10 @@ def process_packets(tcp_cap):
 
         if src == ip and int(packet.tcp.get_field('DstPort')) in REMOTE_PORTS:
             packet_type = 0
-            n_samples += 1
         elif int(packet.tcp.get_field('SrcPort')) in REMOTE_PORTS and dst == ip:
             packet_type = 1
-            n_samples += 1
 
-        if n_samples > 6000:
+        if N_SAMPLES > 6000:
             break
 
         if packet_type == 0:

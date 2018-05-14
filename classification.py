@@ -1,12 +1,8 @@
-import scipy.signal as signal
-import matplotlib.mlab as mlab
-
 from sklearn.cluster import DBSCAN
 from scipy.stats import multivariate_normal
 from sklearn.cluster import KMeans
 from sklearn import svm
 from sklearn.neural_network import MLPClassifier
-import time
 import numpy as np
 import profiling
 
@@ -155,11 +151,11 @@ def classification_neural_networks(traffic_classes, norm_pca_features,
         max_iter=max_iter
     )
     clf.fit(norm_pca_features, obs_classes)
-    LT = clf.predict(norm_pca_features)
-    print('class (from test PCA):', LT)
+    result = clf.predict(norm_pca_features)
+    print('class (from test PCA):', result)
 
     for i in range(norm_pca_test_features.shape[0]):
-        traffic_idx[i] = LT[i]
-        print('Obs: {:2}: Classification->{}'.format(i, traffic_classes[LT[i]]))
+        traffic_idx[i] = result[i]
+        print('Obs: {:2}: Classification->{}'.format(i, traffic_classes[result[i]]))
 
     return traffic_idx

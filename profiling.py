@@ -10,7 +10,7 @@ import scalogram
 warnings.filterwarnings('ignore')
 
 
-def waitforEnter(fstop=True):
+def wait_for_enter(fstop=True):
     if fstop:
         if sys.version_info[0] == 2:
             input("Press ENTER to continue.")
@@ -21,6 +21,7 @@ def waitforEnter(fstop=True):
 def plot_traffic_class(data, name):
     plt.plot(data)
     plt.title(name)
+    wait_for_enter()
 
 
 def plot_3_classes(data1, name1, data2, name2, data3, name3):
@@ -34,7 +35,7 @@ def plot_3_classes(data1, name1, data2, name2, data3, name3):
     plt.plot(data3)
     plt.title(name3)
     plt.show()
-    waitforEnter()
+    wait_for_enter()
 
 
 def get_obs_classes(n_obs_windows, traffic_classes):
@@ -52,7 +53,7 @@ def plot_features(features, traffic_classes, feature1_idx=0, feature2_idx=1):
                  'o' + colors[int(obs_classes[i])])
 
     plt.show()
-    waitforEnter()
+    wait_for_enter()
 
 
 def break_train_test(data, obs_window=120, slide_window=20,
@@ -121,21 +122,39 @@ def extract_features_silence(data):
     return np.array(features)
 
 
+def extract_features_wavelet(data, scales=[2, 4, 8, 16, 32]):
+    features = []
+    n_obs_windows, n_samples, n_cols = data.shape
+
+    for i in range(n_obs_windows):
+        scalogram_features = np.array([])
+        for c in range(n_cols):
+            scalo, scales = scalogram.scalogramCWT(data[i, :, c], scales)
+            scalogram_features = np.append(scalogram_features, scalo)
+
+        features.append(scalogram_features)
+
+    return np.array(features)
+
+
 def traffic_profiling(dataset_path, traffic_class, plot=True):
     dataset = np.loadtxt(dataset_path)
 
     if plot:
         plot_traffic_class(dataset, traffic_class)
 
+    scales = [2, 4, 8, 16, 32, 64, 128, 256]
     data_train, data_test = break_train_test(dataset, random_split=False)
     features = extract_features(data_train)
     test_features = extract_features(data_test)
     features_silence = extract_features_silence(data_train)
     test_features_silence = extract_features_silence(data_test)
+    features_wavelet = extract_features_wavelet(data_train, scales)
+    test_features_wavelet = extract_features_wavelet(data_test, scales)
     n_obs_windows = data_train.shape[0]
 
-    return features, features_silence, test_features, \
-           test_features_silence, n_obs_windows
+    return features, features_silence, features_wavelet, test_features, \
+           test_features_silence, test_features_wavelet, n_obs_windows
 
 
 def normalize_features(features, test_features):
@@ -157,74 +176,39 @@ def extract_traffic_features(traffic_classes, datasets_filepath):
 
     features = None
     features_silence = None
+    features_wavelet = None
     test_features = None
     test_features_silence = None
+    test_features_wavelet = None
     n_obs = None
 
     for d_idx in datasets_filepath:
         d = datasets_filepath[d_idx]
-        f, fs, tf, tfs, n_obs = traffic_profiling(d, traffic_classes[d_idx])
+        f, fs, fw, tf, tfs, tfw, n_obs = traffic_profiling(d, traffic_classes[d_idx])
         if features is None:
             features = np.array([f])
             features_silence = np.array([fs])
+            features_wavelet = np.array([fw])
             test_features = np.array([tf])
             test_features_silence = np.array([tfs])
+            test_features_wavelet = np.array([tfw])
         else:
             features = np.vstack((features, [f]))
             features_silence = np.vstack((features_silence, [fs]))
+            features_wavelet = np.vstack((features_wavelet, [fw]))
             test_features = np.vstack((test_features, [tf]))
             test_features_silence = np.vstack((test_features_silence, [tfs]))
+            test_features_wavelet = np.vstack((test_features_wavelet, [tfw]))
 
+    """
     print('Train Stats Features Size:', features.shape)
-
     plt.figure(4)
     plot_features(features, traffic_classes, 0, 2)
 
     print('Train Silence Features Size:', features_silence.shape)
     plt.figure(5)
     plot_features(features_silence, traffic_classes, 0, 2)
-
     """
-    scales=range(2,256)
-    plt.figure(6)
-
-    i=0
-    data=yt_train[i,:,1]
-    S,scalesF=scalogram.scalogramCWT(data,scales)
-    plt.plot(scalesF,S,'b')
-
-    nObs,nSamp,nCol=browsing_train.shape
-    data=browsing_train[i,:,1]
-    S,scalesF=scalogram.scalogramCWT(data,scales)
-    plt.plot(scalesF,S,'g')
-
-    nObs,nSamp,nCol=mining_train.shape
-    data=mining_train[i,:,1]
-    S,scalesF=scalogram.scalogramCWT(data,scales)
-    plt.plot(scalesF,S,'r')
-
-    plt.show()
-    waitforEnter()
-
-    ## -- 7 -- ##
-    scales=[2,4,8,16,32,64,128,256]
-    features_ytW,oClass_yt=extract_featuresWavelet(yt_train,scales,Class=0)
-    features_browsingW,oClass_browsing=extract_featuresWavelet(browsing_train,scales,Class=1)
-    features_miningW,oClass_mining=extract_featuresWavelet(mining_train,scales,Class=2)
-
-    featuresW=np.vstack((features_ytW,features_browsingW,features_miningW))
-    t_classes=np.vstack((oClass_yt,oClass_browsing,oClass_mining))
-
-    print('Train Wavelet Features Size:',featuresW.shape)
-    plt.figure(7)
-    plot_features(featuresW, traffic_classes, 3, 10)
-    """
-
-    #pca = PCA(n_components=3, svd_solver='full')
-    #pca_features = pca.fit(features).transform(features)
-
-    #plt.figure(8)
-    #plot_features(pca_features, traffic_classes, 0, 2)
 
     # Training features
     all_features = np.hstack((features, features_silence))
@@ -246,50 +230,29 @@ def extract_traffic_features(traffic_classes, datasets_filepath):
     return all_features, pca_features, all_test_features, test_pca_features, n_obs
 
 
-def logplotFeatures(features,oClass,f1index=0,f2index=1):
-    nObs,nFea=features.shape
-    colors=['b','g','r']
-    for i in range(nObs):
-        plt.loglog(
-                features[i,f1index],
-                features[i,f2index],
-                'o'+colors[int(oClass[i])]
-                )
-
-    plt.show()
-    waitforEnter()
-
-
-def extract_featuresWavelet(data,scales=[2,4,8,16,32],Class=0):
-    features=[]
-    nObs,nSamp,nCols=data.shape
-    oClass=np.ones((nObs,1))*Class
-    for i in range(nObs):
-        scalo_features=np.array([])
-        for c in range(nCols):
-            scalo,scales=scalogram.scalogramCWT(data[i,:,c],scales)
-            scalo_features=np.append(scalo_features,scalo)
-            
-        features.append(scalo_features)
-        
-    return(np.array(features),oClass)
-    
-
-def profling():
+def profiling():
     traffic_classes = {
         0: 'YouTube',
-        1: 'Browsing',
-        2: 'Mining (Neoscrypt - 4T CPU)',
-        #3: 'Social Networking',
-        #4: 'Netflix',
+        1: 'Netflix',
+        2: 'Browsing',
+        3: 'Social Networking',
+        4: 'Mining (Neoscrypt - 4T CPU)',
+        5: 'Mining (Neoscrypt - 2T CPU)',
+        6: 'Mining (EquiHash - 65p GPU)',
+        7: 'Mining (EquiHash - 85p GPU)',
+        8: 'Mining (EquiHash - 100p GPU)',
     }
 
     datasets_filepath = {
         0: 'datasets/youtube.dat',
-        1: 'datasets/browsing.dat',
-        2: 'datasets/mining_4t_nicehash.dat',
-        #3: 'datasets/social-network.dat',
-        #4: 'datasets/netflix.dat',
+        1: 'datasets/netflix.dat',
+        2: 'datasets/browsing.dat',
+        3: 'datasets/social-network.dat',
+        4: 'datasets/mining_4t_nicehash.dat',
+        5: 'datasets/mining_2t_nicehash.dat',
+        6: 'datasets/mining_gpu_nicehash_equihash_1070_60p.dat',
+        7: 'datasets/mining_gpu_nicehash_equihash_1080Ti_85p.dat',
+        8: 'datasets/mining_gpu_nicehash_equihash_1080Ti_100p.dat',
 
     }
     plt.ion()
@@ -297,9 +260,9 @@ def profling():
     all_features, pca_features, all_test_features, test_pca_features, n_obs = \
         extract_traffic_features(traffic_classes, datasets_filepath)
 
-    return all_test_features, pca_features, all_test_features,\
+    return all_test_features, pca_features, all_test_features, \
            test_pca_features, n_obs
 
 
 if __name__ == '__main__':
-    profling()
+    profiling()
