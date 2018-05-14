@@ -184,7 +184,7 @@ def extract_traffic_features(traffic_classes, datasets_filepath):
 
     for d_idx in datasets_filepath:
         d = datasets_filepath[d_idx]
-        f, fs, fw, tf, tfs, tfw, n_obs = traffic_profiling(d, traffic_classes[d_idx])
+        f, fs, fw, tf, tfs, tfw, n_obs = traffic_profiling(d, traffic_classes[d_idx], False)
         if features is None:
             features = np.array([f])
             features_silence = np.array([fs])
@@ -211,23 +211,35 @@ def extract_traffic_features(traffic_classes, datasets_filepath):
     """
 
     # Training features
-    all_features = np.hstack((features, features_silence))
+    obs_classes = get_obs_classes(features.shape[1], traffic_classes)
+
+    all_features = np.dstack((features, features_silence))
+    all_features = all_features.reshape(all_features.shape[0] *
+                                            all_features.shape[1],
+                                            all_features.shape[2])
+
     print('Train (All) Features Size:', all_features.shape)
 
     pca = PCA(n_components=3, svd_solver='full')
     pca.fit(all_features)
     pca_features = pca.transform(all_features)
 
-    plt.figure(10)
-    plot_features(pca_features, traffic_classes, 0, 1)
+    #plt.figure(10)
+    #plot_features(pca_features, traffic_classes, 0, 1)
 
     # Testing features
-    all_test_features = np.hstack((test_features, test_features_silence))
+    all_test_features = np.dstack((test_features, test_features_silence))
+
+    all_test_features = all_test_features.reshape(
+        all_test_features.shape[0] * all_test_features.shape[1],
+        all_test_features.shape[2])
+
     print('Test Features Size:', all_test_features.shape)
 
     test_pca_features = pca.transform(all_test_features)
 
-    return all_features, pca_features, all_test_features, test_pca_features, n_obs
+    return obs_classes, all_features, pca_features, all_test_features, \
+           test_pca_features, n_obs
 
 
 def profiling():
@@ -251,17 +263,12 @@ def profiling():
         4: 'datasets/mining_4t_nicehash.dat',
         5: 'datasets/mining_2t_nicehash.dat',
         6: 'datasets/mining_gpu_nicehash_equihash_1070_60p.dat',
-        7: 'datasets/mining_gpu_nicehash_equihash_1080Ti_85p.dat',
-        8: 'datasets/mining_gpu_nicehash_equihash_1080Ti_100p.dat',
-
+        7: 'datasets/mining_gpu_nicehash_equihash_1080ti_85p.dat',
+        8: 'datasets/mining_gpu_nicehash_equihash_1080ti_100p.dat',
     }
     plt.ion()
 
-    all_features, pca_features, all_test_features, test_pca_features, n_obs = \
-        extract_traffic_features(traffic_classes, datasets_filepath)
-
-    return all_test_features, pca_features, all_test_features, \
-           test_pca_features, n_obs
+    return extract_traffic_features(traffic_classes, datasets_filepath)
 
 
 if __name__ == '__main__':

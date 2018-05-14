@@ -159,3 +159,13 @@ def classification_neural_networks(traffic_classes, norm_pca_features,
         print('Obs: {:2}: Classification->{}'.format(i, traffic_classes[result[i]]))
 
     return traffic_idx
+
+
+def main():
+    obs_classes, all_features, pca_features, all_test_features, test_pca_features, \
+    n_obs = profiling.profiling()
+    
+
+
+if __name__ == '__main__':
+    main()
