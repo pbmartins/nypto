@@ -56,12 +56,14 @@ def plot_features(features, traffic_classes, feature1_idx=0, feature2_idx=1):
     wait_for_enter()
 
 
-def break_train_test(data, obs_window=120, slide_window=20,
+def break_train_test(data, obs_window=240, slide_window=40,
                      train_percentage=0.5, random_split=True):
-    n_samples, n_cols = data.shape
-    n_slide_windows = int(n_samples / slide_window)
-    n_obs_windows = int((n_samples - obs_window) / slide_window) + 1
     window_size = int(obs_window / slide_window)
+    n_samples, n_cols = data.shape
+    n_obs_windows = int((n_samples - obs_window) / slide_window)
+    n_samples = (n_obs_windows - 1) * slide_window + obs_window
+    n_slide_windows = n_obs_windows + window_size - 1
+    data = data[:n_samples, :]
 
     data_slices = data.reshape((n_slide_windows, slide_window, n_cols))
     data_obs = np.array([np.concatenate(data_slices[i:window_size+i], axis=0)
