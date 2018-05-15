@@ -165,8 +165,10 @@ def normalize_features(features, test_features):
     normalized_test_features = scaler.fit_transform(test_features)
 
     pca = PCA(n_components=3, svd_solver='full')
-    normalized_pca_features = pca.fit_transform(normalized_features)
-    normalized_pca_test_features = pca.fit_transform(normalized_test_features)
+    normalized_pca_features = pca.fit(normalized_features).\
+        transform(normalized_features)
+    normalized_pca_test_features = pca.fit(normalized_test_features).\
+        transform(normalized_test_features)
 
     return normalized_pca_features, normalized_pca_test_features
 
@@ -187,6 +189,13 @@ def extract_traffic_features(traffic_classes, datasets_filepath):
     for d_idx in datasets_filepath:
         d = datasets_filepath[d_idx]
         f, fs, fw, tf, tfs, tfw, n_obs = traffic_profiling(d, traffic_classes[d_idx], False)
+        f = f[:184]
+        fs = fs[:184]
+        fw = fw[:184]
+        tf = tf[:184]
+        tfs = tfs[:184]
+        tfw = tfw[:184]
+
         if features is None:
             features = np.array([f])
             features_silence = np.array([fs])
@@ -216,57 +225,47 @@ def extract_traffic_features(traffic_classes, datasets_filepath):
     obs_classes = get_obs_classes(features.shape[1], traffic_classes)
 
     all_features = np.dstack((features, features_silence))
-    all_features = all_features.reshape(all_features.shape[0] *
-                                            all_features.shape[1],
-                                            all_features.shape[2])
-
-    print('Train (All) Features Size:', all_features.shape)
-
-    pca = PCA(n_components=3, svd_solver='full')
-    pca.fit(all_features)
-    pca_features = pca.transform(all_features)
-
-    #plt.figure(10)
-    #plot_features(pca_features, traffic_classes, 0, 1)
+    all_features = all_features.reshape(
+        all_features.shape[0] * all_features.shape[1],
+        all_features.shape[2])
 
     # Testing features
     all_test_features = np.dstack((test_features, test_features_silence))
-
     all_test_features = all_test_features.reshape(
         all_test_features.shape[0] * all_test_features.shape[1],
         all_test_features.shape[2])
 
-    print('Test Features Size:', all_test_features.shape)
+    # Normalize train and test features
+    norm_pca_features, norm_pca_test_features = normalize_features(all_features,
+                                                         all_test_features)
 
-    test_pca_features = pca.transform(all_test_features)
-
-    return obs_classes, all_features, pca_features, all_test_features, \
-           test_pca_features, n_obs
+    return traffic_classes, obs_classes, norm_pca_features, \
+           norm_pca_test_features, n_obs
 
 
 def profiling():
     traffic_classes = {
         0: 'YouTube',
-        1: 'Netflix',
-        2: 'Browsing',
-        3: 'Social Networking',
-        4: 'Mining (Neoscrypt - 4T CPU)',
-        5: 'Mining (Neoscrypt - 2T CPU)',
-        6: 'Mining (EquiHash - 65p GPU)',
-        7: 'Mining (EquiHash - 85p GPU)',
-        8: 'Mining (EquiHash - 100p GPU)',
+        # 1: 'Netflix',
+        1: 'Browsing',
+        # 3: 'Social Networking',
+        # 4: 'Mining (Neoscrypt - 4T CPU)',
+        # 5: 'Mining (Neoscrypt - 2T CPU)',
+        # 6: 'Mining (EquiHash - 65p GPU)',
+        # 7: 'Mining (EquiHash - 85p GPU)',
+        # 8: 'Mining (EquiHash - 100p GPU)',
     }
 
     datasets_filepath = {
         0: 'datasets/youtube.dat',
-        1: 'datasets/netflix.dat',
-        2: 'datasets/browsing.dat',
-        3: 'datasets/social-network.dat',
-        4: 'datasets/mining_4t_nicehash.dat',
-        5: 'datasets/mining_2t_nicehash.dat',
-        6: 'datasets/mining_gpu_nicehash_equihash_1070_60p.dat',
-        7: 'datasets/mining_gpu_nicehash_equihash_1080ti_85p.dat',
-        8: 'datasets/mining_gpu_nicehash_equihash_1080ti_100p.dat',
+        #1: 'datasets/netflix.dat',
+        1: 'datasets/browsing.dat',
+        # 3: 'datasets/social-network.dat',
+        # 4: 'datasets/mining_4t_nicehash.dat',
+        # 5: 'datasets/mining_2t_nicehash.dat',
+        # 6: 'datasets/mining_gpu_nicehash_equihash_1070_60p.dat',
+        # 7: 'datasets/mining_gpu_nicehash_equihash_1080ti_85p.dat',
+        # 8: 'datasets/mining_gpu_nicehash_equihash_1080ti_100p.dat',
     }
     plt.ion()
 

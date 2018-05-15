@@ -7,16 +7,14 @@ import numpy as np
 import profiling
 
 
-def get_centroids(traffic_classes, n_obs, features):
-    obs_classes = profiling.get_obs_classes(n_obs, traffic_classes)
+def get_centroids(traffic_classes, obs_classes, features):
     centroids = {t: np.mean(features[(obs_classes == t).flatten()], axis=0)
                  for t in traffic_classes}
     print('All Features Centroids:\n', centroids)
     return centroids
 
 
-def get_covariances(traffic_classes, n_obs, features):
-    obs_classes = profiling.get_obs_classes(n_obs, traffic_classes)
+def get_covariances(traffic_classes, obs_classes, features):
     centroids = {t: np.cov(features[(obs_classes == t).flatten()], rowvar=0)
                  for t in traffic_classes}
     print('All Features Centroids:\n', centroids)
@@ -162,10 +160,13 @@ def classification_neural_networks(traffic_classes, norm_pca_features,
 
 
 def main():
-    obs_classes, all_features, pca_features, all_test_features, test_pca_features, \
-    n_obs = profiling.profiling()
-    
+    traffic_classes, obs_classes, norm_pca_features, \
+    norm_pca_test_features, n_obs = profiling.profiling()
 
+    x = classification_gaussian_distribution(traffic_classes,
+                                             norm_pca_features,
+                                             norm_pca_test_features)
+    print(x)
 
 if __name__ == '__main__':
     main()
