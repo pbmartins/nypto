@@ -5,24 +5,19 @@ from sklearn.cluster import KMeans
 from sklearn.neural_network import MLPClassifier
 from scipy.stats import multivariate_normal
 import numpy as np
+import pickle
 import profiling
 
 
-def get_centroids(traffic_classes, features):
-    n_obs = int(features.shape[0] / len(traffic_classes))
-    obs_classes = profiling.get_obs_classes(n_obs, 1, traffic_classes)
+def get_centroids(traffic_classes, obs_classes, features):
     centroids = {t: np.mean(features[(obs_classes == t).flatten(), :], axis=0)
                  for t in traffic_classes}
-    print('All Features Centroids:\n', centroids)
     return centroids
 
 
-def get_covariances(traffic_classes, features):
-    n_obs = int(features.shape[0] / len(traffic_classes))
-    obs_classes = profiling.get_obs_classes(n_obs, 1, traffic_classes)
+def get_covariances(traffic_classes, obs_classes, features):
     centroids = {t: np.cov(features[(obs_classes == t).flatten(), :], rowvar=0)
                  for t in traffic_classes}
-    print('All Features Covariances:\n', centroids)
     return centroids
 
 
@@ -30,31 +25,24 @@ def distance(centroid, point):
     return np.sqrt(np.sum(np.square(point - centroid)))
 
 
-def classification_distances(traffic_classes, centroids, test_features):
-    print('\n-- Classification based on Distances --')
+def classification_distances(centroids, test_features):
     n_obs, n_features = test_features.shape
     traffic_idx = {}
 
     for i in range(n_obs):
         w = test_features[i]
         distances = [distance(w, centroids[c]) for c in centroids]
-        distances_perc = distances / np.sum(distances)
         t_idx = np.argsort(distances)[0]
         traffic_idx[i] = t_idx
-
-        print('Obs: {:2}: Normalized Distances to Centroids: '
-              '[{:.4f},{:.4f},{:.4f}] -> Classification: {} -> {}'.format(
-                i, *distances_perc, t_idx, traffic_classes[t_idx]))
 
     return traffic_idx
 
 
-def classification_gaussian_distribution(traffic_classes, pca_features,
+def classification_gaussian_distribution(traffic_classes, obs_classes, pca_features,
                                          test_pca_features):
-    print('\n-- Classification based on Multivariate PDF (PCA Features) --')
     n_obs, n_features = test_pca_features.shape
-    means = get_centroids(traffic_classes, pca_features)
-    covs = get_covariances(traffic_classes, pca_features)
+    means = get_centroids(traffic_classes, obs_classes, pca_features)
+    covs = get_covariances(traffic_classes, obs_classes, pca_features)
     traffic_idx = {}
 
     for i in range(n_obs):
@@ -64,21 +52,14 @@ def classification_gaussian_distribution(traffic_classes, pca_features,
         t_idx = np.argsort(probs)[-1]
         traffic_idx[i] = t_idx
 
-        #print('Obs: {:2}: Probabilities: [{:.4e},{:.4e}] -> '
-        #      'Classification: {} -> {}'.format(i, *probs, t_idx,
-        #                                        traffic_classes[t_idx]))
-
     return traffic_idx
 
 
-def classification_clustering(traffic_classes, norm_pca_features,
-                              norm_pca_test_features, n_clusters=3, eps=10000,
+def classification_clustering(traffic_classes, obs_classes, norm_pca_features,
+                              norm_pca_test_features, n_clusters=9, eps=10000,
                               method=0):
-    #print('\n-- Classification based on Clustering (Kmeans) --')
     traffic_idx = {}
     n_obs, n_features = norm_pca_features.shape
-    n_obs = int(n_obs / len(traffic_classes))
-    obs_classes = profiling.get_obs_classes(n_obs, 1, traffic_classes)
     centroids = np.array([])
 
     for c in range(n_clusters):
@@ -86,18 +67,18 @@ def classification_clustering(traffic_classes, norm_pca_features,
             norm_pca_features[(obs_classes == c).flatten(), :], axis=0))
 
     centroids = centroids.reshape((len(traffic_classes), n_features))
-    #print('PCA (pca_features) Centroids:\n', centroids)
 
     cluster_method = KMeans(init=centroids, n_clusters=n_clusters) \
         if method == 0 else DBSCAN(eps=eps)
     cluster_method.fit(norm_pca_features)
     labels = cluster_method.labels_
 
-    # Determines and quantifies the presence of each original class observation in each cluster
+    # Determines and quantifies the presence of each original class observation
+    #  in each cluster
     clusters = np.zeros((len(traffic_classes), n_features))
     for cluster in range(n_clusters):
         aux = obs_classes[(labels == cluster)]
-        for c in range(n_clusters):
+        for c in range(n_features):
             clusters[cluster, c] = np.sum(aux == c)
 
     cluster_probs = clusters / np.sum(clusters, axis=1)[:, np.newaxis]
@@ -109,15 +90,11 @@ def classification_clustering(traffic_classes, norm_pca_features,
         t_idx = np.argsort(t_probs)[-1]
         traffic_idx[i] = t_idx
 
-        #print('Obs: {:2}: Probabilities beeing in each class: '
-        #      '[{:.2f}%,{:.2f}%] -> Classification: {} -> {}'.format(
-        #    i, *t_probs, t_idx, traffic_classes[t_idx]))
-
     return traffic_idx
 
 
-def classification_svm(traffic_classes, norm_features, norm_test_features, mode=0):
-    #print('\n-- Classification based on Support Vector Machines --')
+def classification_svm(obs_classes, norm_features,
+                       norm_test_features, mode=0):
     traffic_idx = {}
     modes = {
         0: {'name': 'SVC', 'func': svm.SVC(kernel='linear')},
@@ -125,31 +102,21 @@ def classification_svm(traffic_classes, norm_features, norm_test_features, mode=
         2: {'name': 'Kernel Poly', 'func': svm.SVC(kernel='poly', degree=2)},
         3: {'name': 'Linear SVC', 'func': svm.LinearSVC()}
     }
-    n_obs, n_features = norm_features.shape
-    n_obs = int(n_obs / len(traffic_classes))
-    obs_classes = profiling.get_obs_classes(n_obs, 1, traffic_classes)
 
     modes[mode]['func'].fit(norm_features, obs_classes)
-    result = modes[mode]['func'].predict(norm_features)
-    #print('class (from test PCA features with {}):'.format(modes[mode]['name']),
-          #result)
+    result = modes[mode]['func'].predict(norm_test_features)
 
     for i in range(norm_test_features.shape[0]):
         traffic_idx[i] = result[i]
-        #print('Obs: {:2}: {} -> {}'.format(i, modes[mode],
-                                           #traffic_classes[result[i]]))
 
     return traffic_idx
 
 
-def classification_neural_networks(traffic_classes, norm_pca_features,
-                                   norm_pca_test_features, alpha=1,
-                                   max_iter=100000, hidden_layer_size=100):
-    #print('\n-- Classification based on Neural Networks --')
+def classification_neural_networks(obs_classes, norm_pca_features,
+                                   norm_pca_test_features, alpha=0.1,
+                                   max_iter=100000, hidden_layer_size=1000):
+
     traffic_idx = {}
-    n_obs, n_features = norm_pca_features.shape
-    n_obs = int(n_obs / len(traffic_classes))
-    obs_classes = profiling.get_obs_classes(n_obs, 1, traffic_classes)
     clf = MLPClassifier(
         solver='lbfgs',
         alpha=alpha,
@@ -157,33 +124,70 @@ def classification_neural_networks(traffic_classes, norm_pca_features,
         max_iter=max_iter
     )
     clf.fit(norm_pca_features, obs_classes)
-    result = clf.predict(norm_pca_features)
-    #print('class (from test PCA):', result)
+    result = clf.predict(norm_pca_test_features)
 
     for i in range(norm_pca_test_features.shape[0]):
         traffic_idx[i] = result[i]
-        #print('Obs: {:2}: Classification->{}'.format(i, traffic_classes[result[i]]))
 
     return traffic_idx
 
 
 def main():
-    traffic_classes, norm_pca_features, \
-    norm_pca_test_features, n_obs = profiling.profiling()
 
     """
-    x = classification_gaussian_distribution(traffic_classes,
-                                             norm_pca_features,
-                                             norm_pca_test_features)
-    print(x)
-    """
-    y_test = classification_neural_networks(traffic_classes, norm_pca_features,
-                                  norm_pca_test_features)
+    traffic_classes, norm_pca_features, norm_pca_test_features, \
+    traffic_samples_number = profiling.profiling()
 
-    n_obs, n_features = norm_pca_features.shape
-    n_obs = int(n_obs / len(traffic_classes))
-    obs_classes = profiling.get_obs_classes(n_obs, 1, traffic_classes)
-    print(metrics.accuracy_score(list(y_test.values()), obs_classes))
+    d = {
+        'classes': traffic_classes,
+        'train': norm_pca_features,
+        'test': norm_pca_test_features,
+        'number': traffic_samples_number
+    }
+    with open('input_data.pkl', 'wb') as output:
+        pickle.dump(d, output, pickle.HIGHEST_PROTOCOL)
+    """
+
+    with open('input_data.pkl', 'rb') as input:
+        d = pickle.load(input)
+
+    traffic_classes = d['classes']
+    norm_pca_features = d['train']
+    norm_pca_test_features = d['test']
+    traffic_samples_number = d['number']
+
+    # TODO: traffic_classes with all categories instead of joined mining datasets
+
+    obs_classes = profiling.get_obs_classes(traffic_samples_number, 1,
+                                            traffic_classes)
+
+
+    y_test = classification_gaussian_distribution(traffic_classes, obs_classes,
+                                                  norm_pca_features,
+                                                  norm_pca_test_features)
+
+    print('GAUSSIAN acc = ',
+          metrics.accuracy_score(list(y_test.values()), obs_classes))
+
+    y_test = classification_clustering(traffic_classes, obs_classes, norm_pca_features,
+                                norm_pca_test_features)
+
+    print('KMeans acc = ',
+          metrics.accuracy_score(list(y_test.values()), obs_classes))
+
+
+    y_test = classification_svm(obs_classes, norm_pca_features,
+                                             norm_pca_test_features, mode=1)
+
+    print('SVM acc = ',
+          metrics.accuracy_score(list(y_test.values()), obs_classes))
+
+    y_test = classification_neural_networks(obs_classes, norm_pca_features,
+                                            norm_pca_test_features)
+
+    print('NN acc = ',
+          metrics.accuracy_score(list(y_test.values()), obs_classes))
+
 
 if __name__ == '__main__':
     main()

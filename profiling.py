@@ -16,7 +16,7 @@ def wait_for_enter(fstop=True):
             input("Press ENTER to continue.")
         else:
             input("Press ENTER to continue.")
-            
+
 
 def plot_traffic_class(data, name):
     plt.plot(data)
@@ -38,8 +38,12 @@ def plot_3_classes(data1, name1, data2, name2, data3, name3):
     wait_for_enter()
 
 
-def get_obs_classes(n_obs_windows, n_elems, traffic_classes):
-    return np.vstack([np.ones((n_obs_windows, n_elems)) * t for t in traffic_classes])
+def get_obs_classes(traffic_samples_number, n_elems, traffic_classes):
+
+    return np.vstack(
+        [np.ones((traffic_samples_number[t], n_elems)) * t if t < 4 else
+         np.ones((traffic_samples_number[t], n_elems)) * 4 for t in traffic_classes]
+    )
 
 
 def plot_features(features, traffic_classes, feature1_idx=0, feature2_idx=1):
@@ -66,7 +70,7 @@ def break_train_test(data, obs_window=240, slide_window=40,
     data = data[:n_samples, :]
 
     data_slices = data.reshape((n_slide_windows, slide_window, n_cols))
-    data_obs = np.array([np.concatenate(data_slices[i:window_size+i], axis=0)
+    data_obs = np.array([np.concatenate(data_slices[i:window_size + i], axis=0)
                          for i in range(n_obs_windows)])
 
     order = np.random.permutation(n_obs_windows) \
@@ -90,7 +94,7 @@ def extract_features(data):
         stats.kurtosis(data[i, :, :]),
         np.array(np.percentile(data[i, :, :], percentils, axis=0)).T.flatten(),
     )) for i in range(n_obs_windows)])
-    
+
     return features
 
 
@@ -99,9 +103,9 @@ def extract_silence(data, threshold=256):
 
     for i in range(1, len(data)):
         if data[i] <= threshold:
-            if data[i-1] > threshold:
+            if data[i - 1] > threshold:
                 s.append(1)
-            elif data[i-1] <= threshold:
+            elif data[i - 1] <= threshold:
                 s[-1] += 1
 
     return s if s != [] else [0]
@@ -146,7 +150,7 @@ def traffic_profiling(dataset_path, traffic_class, plot=True):
         plot_traffic_class(dataset, traffic_class)
 
     scales = [2, 4, 8, 16, 32, 64, 128, 256]
-    data_train, data_test = break_train_test(dataset, random_split=False)
+    data_train, data_test = break_train_test(dataset, random_split=True)
     features = extract_features(data_train)
     test_features = extract_features(data_test)
     features_silence = extract_features_silence(data_train)
@@ -165,9 +169,9 @@ def normalize_features(features, test_features):
     normalized_test_features = scaler.fit_transform(test_features)
 
     pca = PCA(n_components=3, svd_solver='full')
-    normalized_pca_features = pca.fit(normalized_features).\
+    normalized_pca_features = pca.fit(normalized_features). \
         transform(normalized_features)
-    normalized_pca_test_features = pca.fit(normalized_test_features).\
+    normalized_pca_test_features = pca.fit(normalized_test_features). \
         transform(normalized_test_features)
 
     return normalized_pca_features, normalized_pca_test_features
@@ -184,33 +188,29 @@ def extract_traffic_features(traffic_classes, datasets_filepath):
     test_features = None
     test_features_silence = None
     test_features_wavelet = None
-    n_obs = None
+    traffic_samples_number = None
 
     for d_idx in datasets_filepath:
         d = datasets_filepath[d_idx]
         f, fs, fw, tf, tfs, tfw, n_obs = \
             traffic_profiling(d, traffic_classes[d_idx], False)
-        f = f[:72]
-        fs = fs[:72]
-        fw = fw[:72]
-        tf = tf[:72]
-        tfs = tfs[:72]
-        tfw = tfw[:72]
 
         if features is None:
-            features = np.array([f])
-            features_silence = np.array([fs])
-            features_wavelet = np.array([fw])
-            test_features = np.array([tf])
-            test_features_silence = np.array([tfs])
-            test_features_wavelet = np.array([tfw])
+            features = f
+            features_silence = fs
+            features_wavelet = fw
+            test_features = tf
+            test_features_silence = tfs
+            test_features_wavelet = tfw
+            traffic_samples_number = [n_obs]
         else:
-            features = np.vstack((features, [f]))
-            features_silence = np.vstack((features_silence, [fs]))
-            features_wavelet = np.vstack((features_wavelet, [fw]))
-            test_features = np.vstack((test_features, [tf]))
-            test_features_silence = np.vstack((test_features_silence, [tfs]))
-            test_features_wavelet = np.vstack((test_features_wavelet, [tfw]))
+            features = np.concatenate((features, f))
+            features_silence = np.concatenate((features_silence, fs))
+            features_wavelet = np.concatenate((features_wavelet, fw))
+            test_features = np.concatenate((test_features, tf))
+            test_features_silence = np.concatenate((test_features_silence, tfs))
+            test_features_wavelet = np.concatenate((test_features_wavelet, tfw))
+            traffic_samples_number.append(n_obs)
 
     """
     print('Train Stats Features Size:', features.shape)
@@ -223,23 +223,19 @@ def extract_traffic_features(traffic_classes, datasets_filepath):
     """
 
     # Training features
-    all_features = np.dstack((features, features_silence))
-    all_features = all_features.reshape(
-        all_features.shape[0] * all_features.shape[1],
-        all_features.shape[2])
+    all_features = np.hstack((features, features_silence))
 
-    # Testing features
-    all_test_features = np.dstack((test_features, test_features_silence))
-    all_test_features = all_test_features.reshape(
-        all_test_features.shape[0] * all_test_features.shape[1],
-        all_test_features.shape[2])
+    # Testing features (size must be the same than the training)
+    all_test_features = np.hstack((
+        test_features[:features.shape[0]],
+        test_features_silence[:features_silence.shape[0]])
+    )
 
     # Normalize train and test features
     norm_pca_features, norm_pca_test_features = normalize_features(all_features,
-                                                         all_test_features)
+                                                                   all_test_features)
 
-    return traffic_classes, norm_pca_features, \
-           norm_pca_test_features, n_obs
+    return traffic_classes, norm_pca_features, norm_pca_test_features, traffic_samples_number
 
 
 def profiling():
