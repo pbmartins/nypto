@@ -125,7 +125,8 @@ def classification_svm(traffic_classes, norm_features, norm_test_features, mode=
         3: {'name': 'Linear SVC', 'func': svm.LinearSVC()}
     }
     n_obs, n_features = norm_features.shape
-    obs_classes = profiling.get_obs_classes(n_obs, n_features, traffic_classes)
+    n_obs = int(n_obs / len(traffic_classes))
+    obs_classes = profiling.get_obs_classes(n_obs, 1, traffic_classes)
 
     modes[mode]['func'].fit(norm_features, obs_classes)
     result = modes[mode]['func'].predict(norm_features)
@@ -134,8 +135,8 @@ def classification_svm(traffic_classes, norm_features, norm_test_features, mode=
 
     for i in range(norm_test_features.shape[0]):
         traffic_idx[i] = result[i]
-        print('Obs: {:2}: {} -> {}'.format(i, modes[mode],
-                                           traffic_classes[result[i]]))
+        print('Obs: {:2}: {} -> {}'.format(
+            i, modes[mode], traffic_classes[result[i]]))
 
     return traffic_idx
 
@@ -146,6 +147,7 @@ def classification_neural_networks(traffic_classes, norm_pca_features,
     print('\n-- Classification based on Neural Networks --')
     traffic_idx = {}
     n_obs, n_features = norm_pca_features.shape
+    n_obs = int(n_obs / len(traffic_classes))
     obs_classes = profiling.get_obs_classes(n_obs, n_features, traffic_classes)
     clf = MLPClassifier(
         solver='lbfgs',
@@ -159,14 +161,15 @@ def classification_neural_networks(traffic_classes, norm_pca_features,
 
     for i in range(norm_pca_test_features.shape[0]):
         traffic_idx[i] = result[i]
+        print(result[i])
         print('Obs: {:2}: Classification->{}'.format(i, traffic_classes[result[i]]))
 
     return traffic_idx
 
 
 def main():
-    traffic_classes, norm_pca_features, \
-    norm_pca_test_features, n_obs = profiling.profiling()
+    traffic_classes, norm_pca_features, norm_pca_test_features, n_obs = \
+        profiling.profiling()
 
     """
     x = classification_gaussian_distribution(traffic_classes,
@@ -174,9 +177,20 @@ def main():
                                              norm_pca_test_features)
     print(x)
     """
+    """
     x = classification_clustering(traffic_classes, norm_pca_features,
                                   norm_pca_test_features, n_clusters=2)
     print(x)
+    """
+    """
+    x = classification_svm(traffic_classes, norm_pca_features,
+                           norm_pca_test_features, mode=0)
+    print(x)
+    """
+    x = classification_neural_networks(
+        traffic_classes, norm_pca_features, norm_pca_test_features)
+    print(x)
+
 
 if __name__ == '__main__':
     main()
