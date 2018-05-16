@@ -1,8 +1,9 @@
-from sklearn.cluster import DBSCAN
-from scipy.stats import multivariate_normal
-from sklearn.cluster import KMeans
+from sklearn import metrics
 from sklearn import svm
+from sklearn.cluster import DBSCAN
+from sklearn.cluster import KMeans
 from sklearn.neural_network import MLPClassifier
+from scipy.stats import multivariate_normal
 import numpy as np
 import profiling
 
@@ -73,7 +74,7 @@ def classification_gaussian_distribution(traffic_classes, pca_features,
 def classification_clustering(traffic_classes, norm_pca_features,
                               norm_pca_test_features, n_clusters=3, eps=10000,
                               method=0):
-    print('\n-- Classification based on Clustering (Kmeans) --')
+    #print('\n-- Classification based on Clustering (Kmeans) --')
     traffic_idx = {}
     n_obs, n_features = norm_pca_features.shape
     n_obs = int(n_obs / len(traffic_classes))
@@ -85,7 +86,7 @@ def classification_clustering(traffic_classes, norm_pca_features,
             norm_pca_features[(obs_classes == c).flatten(), :], axis=0))
 
     centroids = centroids.reshape((len(traffic_classes), n_features))
-    print('PCA (pca_features) Centroids:\n', centroids)
+    #print('PCA (pca_features) Centroids:\n', centroids)
 
     cluster_method = KMeans(init=centroids, n_clusters=n_clusters) \
         if method == 0 else DBSCAN(eps=eps)
@@ -116,7 +117,7 @@ def classification_clustering(traffic_classes, norm_pca_features,
 
 
 def classification_svm(traffic_classes, norm_features, norm_test_features, mode=0):
-    print('\n-- Classification based on Support Vector Machines --')
+    #print('\n-- Classification based on Support Vector Machines --')
     traffic_idx = {}
     modes = {
         0: {'name': 'SVC', 'func': svm.SVC(kernel='linear')},
@@ -125,17 +126,18 @@ def classification_svm(traffic_classes, norm_features, norm_test_features, mode=
         3: {'name': 'Linear SVC', 'func': svm.LinearSVC()}
     }
     n_obs, n_features = norm_features.shape
-    obs_classes = profiling.get_obs_classes(n_obs, n_features, traffic_classes)
+    n_obs = int(n_obs / len(traffic_classes))
+    obs_classes = profiling.get_obs_classes(n_obs, 1, traffic_classes)
 
     modes[mode]['func'].fit(norm_features, obs_classes)
     result = modes[mode]['func'].predict(norm_features)
-    print('class (from test PCA features with {}):'.format(modes[mode]['name']),
-          result)
+    #print('class (from test PCA features with {}):'.format(modes[mode]['name']),
+          #result)
 
     for i in range(norm_test_features.shape[0]):
         traffic_idx[i] = result[i]
-        print('Obs: {:2}: {} -> {}'.format(i, modes[mode],
-                                           traffic_classes[result[i]]))
+        #print('Obs: {:2}: {} -> {}'.format(i, modes[mode],
+                                           #traffic_classes[result[i]]))
 
     return traffic_idx
 
@@ -143,10 +145,11 @@ def classification_svm(traffic_classes, norm_features, norm_test_features, mode=
 def classification_neural_networks(traffic_classes, norm_pca_features,
                                    norm_pca_test_features, alpha=1,
                                    max_iter=100000, hidden_layer_size=100):
-    print('\n-- Classification based on Neural Networks --')
+    #print('\n-- Classification based on Neural Networks --')
     traffic_idx = {}
     n_obs, n_features = norm_pca_features.shape
-    obs_classes = profiling.get_obs_classes(n_obs, n_features, traffic_classes)
+    n_obs = int(n_obs / len(traffic_classes))
+    obs_classes = profiling.get_obs_classes(n_obs, 1, traffic_classes)
     clf = MLPClassifier(
         solver='lbfgs',
         alpha=alpha,
@@ -155,11 +158,11 @@ def classification_neural_networks(traffic_classes, norm_pca_features,
     )
     clf.fit(norm_pca_features, obs_classes)
     result = clf.predict(norm_pca_features)
-    print('class (from test PCA):', result)
+    #print('class (from test PCA):', result)
 
     for i in range(norm_pca_test_features.shape[0]):
         traffic_idx[i] = result[i]
-        print('Obs: {:2}: Classification->{}'.format(i, traffic_classes[result[i]]))
+        #print('Obs: {:2}: Classification->{}'.format(i, traffic_classes[result[i]]))
 
     return traffic_idx
 
@@ -174,9 +177,13 @@ def main():
                                              norm_pca_test_features)
     print(x)
     """
-    x = classification_clustering(traffic_classes, norm_pca_features,
-                                  norm_pca_test_features, n_clusters=2)
-    print(x)
+    y_test = classification_neural_networks(traffic_classes, norm_pca_features,
+                                  norm_pca_test_features)
+
+    n_obs, n_features = norm_pca_features.shape
+    n_obs = int(n_obs / len(traffic_classes))
+    obs_classes = profiling.get_obs_classes(n_obs, 1, traffic_classes)
+    print(metrics.accuracy_score(list(y_test.values()), obs_classes))
 
 if __name__ == '__main__':
     main()

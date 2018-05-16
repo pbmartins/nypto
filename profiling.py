@@ -190,12 +190,12 @@ def extract_traffic_features(traffic_classes, datasets_filepath):
         d = datasets_filepath[d_idx]
         f, fs, fw, tf, tfs, tfw, n_obs = \
             traffic_profiling(d, traffic_classes[d_idx], False)
-        f = f[:184]
-        fs = fs[:184]
-        fw = fw[:184]
-        tf = tf[:184]
-        tfs = tfs[:184]
-        tfw = tfw[:184]
+        f = f[:72]
+        fs = fs[:72]
+        fw = fw[:72]
+        tf = tf[:72]
+        tfs = tfs[:72]
+        tfw = tfw[:72]
 
         if features is None:
             features = np.array([f])
@@ -245,26 +245,26 @@ def extract_traffic_features(traffic_classes, datasets_filepath):
 def profiling():
     traffic_classes = {
         0: 'YouTube',
-        # 1: 'Netflix',
-        1: 'Browsing',
-        # 3: 'Social Networking',
-        # 4: 'Mining (Neoscrypt - 4T CPU)',
-        # 5: 'Mining (Neoscrypt - 2T CPU)',
-        # 6: 'Mining (EquiHash - 65p GPU)',
-        # 7: 'Mining (EquiHash - 85p GPU)',
-        # 8: 'Mining (EquiHash - 100p GPU)',
+        1: 'Netflix',
+        2: 'Browsing',
+        3: 'Social Networking',
+        4: 'Mining (Neoscrypt - 4T CPU)',
+        5: 'Mining (Neoscrypt - 2T CPU)',
+        6: 'Mining (EquiHash - 65p GPU)',
+        7: 'Mining (EquiHash - 85p GPU)',
+        8: 'Mining (EquiHash - 100p GPU)',
     }
 
     datasets_filepath = {
         0: 'datasets/youtube.dat',
-        #1: 'datasets/netflix.dat',
-        1: 'datasets/browsing.dat',
-        # 3: 'datasets/social-network.dat',
-        # 4: 'datasets/mining_4t_nicehash.dat',
-        # 5: 'datasets/mining_2t_nicehash.dat',
-        # 6: 'datasets/mining_gpu_nicehash_equihash_1070_60p.dat',
-        # 7: 'datasets/mining_gpu_nicehash_equihash_1080ti_85p.dat',
-        # 8: 'datasets/mining_gpu_nicehash_equihash_1080ti_100p.dat',
+        1: 'datasets/netflix.dat',
+        2: 'datasets/browsing.dat',
+        3: 'datasets/social-network.dat',
+        4: 'datasets/mining_4t_nicehash.dat',
+        5: 'datasets/mining_2t_nicehash.dat',
+        6: 'datasets/mining_gpu_nicehash_equihash_1070_60p.dat',
+        7: 'datasets/mining_gpu_nicehash_equihash_1080ti_85p.dat',
+        8: 'datasets/mining_gpu_nicehash_equihash_1080ti_100p.dat',
     }
     plt.ion()
 
