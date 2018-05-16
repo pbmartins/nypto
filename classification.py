@@ -133,7 +133,6 @@ def classification_neural_networks(obs_classes, norm_pca_features,
 
 
 def main():
-
     """
     traffic_classes, norm_pca_features, norm_pca_test_features, \
     traffic_samples_number = profiling.profiling()
@@ -161,7 +160,7 @@ def main():
     obs_classes = profiling.get_obs_classes(traffic_samples_number, 1,
                                             traffic_classes)
 
-
+    """
     y_test = classification_gaussian_distribution(traffic_classes, obs_classes,
                                                   norm_pca_features,
                                                   norm_pca_test_features)
@@ -175,6 +174,7 @@ def main():
     print('KMeans acc = ',
           metrics.accuracy_score(list(y_test.values()), obs_classes))
 
+    """
 
     y_test = classification_svm(obs_classes, norm_pca_features,
                                              norm_pca_test_features, mode=1)
