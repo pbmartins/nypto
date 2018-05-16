@@ -38,14 +38,14 @@ def plot_3_classes(data1, name1, data2, name2, data3, name3):
     wait_for_enter()
 
 
-def get_obs_classes(n_obs_windows, traffic_classes):
-    return np.vstack([np.ones((n_obs_windows, 1)) * t for t in traffic_classes])
+def get_obs_classes(n_obs_windows, n_elems, traffic_classes):
+    return np.vstack([np.ones((n_obs_windows, n_elems)) * t for t in traffic_classes])
 
 
 def plot_features(features, traffic_classes, feature1_idx=0, feature2_idx=1):
     n_obs_windows, n_features = features.shape
     obs_classes = get_obs_classes(
-        int(n_obs_windows / len(traffic_classes)), traffic_classes)
+        int(n_obs_windows / len(traffic_classes)), 1, traffic_classes)
     colors = ['b', 'g', 'r']
 
     for i in range(n_obs_windows):
@@ -104,7 +104,7 @@ def extract_silence(data, threshold=256):
             elif data[i-1] <= threshold:
                 s[-1] += 1
 
-    return s
+    return s if s != [] else [0]
 
 
 def extract_features_silence(data):
@@ -188,7 +188,8 @@ def extract_traffic_features(traffic_classes, datasets_filepath):
 
     for d_idx in datasets_filepath:
         d = datasets_filepath[d_idx]
-        f, fs, fw, tf, tfs, tfw, n_obs = traffic_profiling(d, traffic_classes[d_idx], False)
+        f, fs, fw, tf, tfs, tfw, n_obs = \
+            traffic_profiling(d, traffic_classes[d_idx], False)
         f = f[:184]
         fs = fs[:184]
         fw = fw[:184]
@@ -222,8 +223,6 @@ def extract_traffic_features(traffic_classes, datasets_filepath):
     """
 
     # Training features
-    obs_classes = get_obs_classes(features.shape[1], traffic_classes)
-
     all_features = np.dstack((features, features_silence))
     all_features = all_features.reshape(
         all_features.shape[0] * all_features.shape[1],
@@ -239,7 +238,7 @@ def extract_traffic_features(traffic_classes, datasets_filepath):
     norm_pca_features, norm_pca_test_features = normalize_features(all_features,
                                                          all_test_features)
 
-    return traffic_classes, obs_classes, norm_pca_features, \
+    return traffic_classes, norm_pca_features, \
            norm_pca_test_features, n_obs
 
 

@@ -5,8 +5,6 @@ import argparse
 INFILE_PATH = 'miner.pcapng'
 OUTFILE_PATH = 'datasets/mining_4t_nicehash.dat'
 SAMPLE_DELTA = 0.5
-N_SAMPLES = 0
-TOTAL_SAMPLES = 14400
 
 LOCAL_IP = '192.168.1.158'
 LOCAL_IPV6 = '2001:8a0:de41:5501:9af7:5d3d:ed53:73dd'
@@ -15,30 +13,20 @@ REMOTE_PORTS = [3341, 3333, 3334, 3357, 80, 443]
 
 def save_to_file(delta, last_bytes_up, last_bytes_down,
         last_npkts_up, last_npkts_down, last_nsyns_up, last_nsyns_down):
-        global OUTFILE_PATH
-        global N_SAMPLES
+    global OUTFILE_PATH
 
-        # Save to file
-        #if N_SAMPLES + 1 > TOTAL_SAMPLES:
-        #    return
+    with open(OUTFILE_PATH, "a") as f:
+        f.write("{} {} {} {} {} {}\n".format(last_bytes_up, last_bytes_down,
+            last_npkts_up, last_npkts_down, last_nsyns_up, last_nsyns_down))
 
-        with open(OUTFILE_PATH, "a") as f:
-            #N_SAMPLES += 1
-            f.write("{} {} {} {} {} {}\n".format(last_bytes_up, last_bytes_down,
-                last_npkts_up, last_npkts_down, last_nsyns_up, last_nsyns_down))
+        diff_intervals = int(delta / SAMPLE_DELTA)
 
-            diff_intervals = int(delta / SAMPLE_DELTA)
-            #n_intervals = TOTAL_SAMPLES - (N_SAMPLES + diff_intervals) \
-            #    if diff_intervals + N_SAMPLES > TOTAL_SAMPLES else diff_intervals
-
-            for i in range(diff_intervals):
-                N_SAMPLES += 1
-                f.write("0 0 0 0 0 0\n")
+        for i in range(diff_intervals):
+            f.write("0 0 0 0 0 0\n")
 
 
 def process_packets(tcp_cap):
     global SAMPLE_DELTA
-    global N_SAMPLES
 
     last_timestamp = None
     last_bytes_up = 0
@@ -63,9 +51,6 @@ def process_packets(tcp_cap):
             packet_type = 0
         elif int(packet.tcp.get_field('SrcPort')) in REMOTE_PORTS and dst == ip:
             packet_type = 1
-
-        #if N_SAMPLES > TOTAL_SAMPLES:
-        #    break
 
         if packet_type == 0:
             if last_timestamp is None:
