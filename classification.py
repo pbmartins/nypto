@@ -138,6 +138,7 @@ def accuracy_score(y_pred, y_true):
 
 
 def main():
+    """
     unnorm_train_features, unnorm_test_features, \
     norm_pca_train_features, norm_pca_test_features, \
     traffic_classes, traffic_samples_number = profiling.profiling()
@@ -155,7 +156,7 @@ def main():
         pickle.dump(d, output, pickle.HIGHEST_PROTOCOL)
 
     """
-    x = 1
+
     with open('input_data.pkl', 'rb') as input:
         d = pickle.load(input)
 
@@ -169,10 +170,9 @@ def main():
     obs_classes = profiling.get_obs_classes(traffic_samples_number, 1,
                                             traffic_classes)
 
-    Plot features
-    
-    profiling.plot_features(norm_pca_train_features, obs_classes)
-    
+    profiling.plot_features(unnorm_train_features, obs_classes)
+
+    """
     y_test = classification_gaussian_distribution(traffic_classes, obs_classes,
                                                   norm_pca_train_features,
                                                   norm_pca_test_features)
