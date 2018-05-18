@@ -227,10 +227,11 @@ def extract_traffic_features(traffic_classes, datasets_filepath):
     )
 
     # Normalize train and test features
-    norm_pca_features, norm_pca_test_features = normalize_features(all_features,
+    norm_pca_train_features, norm_pca_test_features = normalize_features(all_features,
                                                                    all_test_features)
 
-    return traffic_classes, norm_pca_features, norm_pca_test_features, traffic_samples_number
+    return all_features, all_test_features, norm_pca_train_features, \
+           norm_pca_test_features, traffic_classes, traffic_samples_number
 
 
 def profiling():

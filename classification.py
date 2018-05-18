@@ -138,50 +138,53 @@ def accuracy_score(y_pred, y_true):
 
 
 def main():
-    """
-    traffic_classes, norm_pca_features, norm_pca_test_features, \
-    traffic_samples_number = profiling.profiling()
+    unnorm_train_features, unnorm_test_features, \
+    norm_pca_train_features, norm_pca_test_features, \
+    traffic_classes, traffic_samples_number = profiling.profiling()
 
     d = {
+        'unnorm_train': unnorm_train_features,
+        'unnorm_test': unnorm_test_features,
+        'norm_train': norm_pca_train_features,
+        'norm_test': norm_pca_test_features,
         'classes': traffic_classes,
-        'train': norm_pca_features,
-        'test': norm_pca_test_features,
-        'number': traffic_samples_number
+        'samples_number': traffic_samples_number
     }
+
     with open('input_data.pkl', 'wb') as output:
         pickle.dump(d, output, pickle.HIGHEST_PROTOCOL)
-    """
 
+    """
+    x = 1
     with open('input_data.pkl', 'rb') as input:
         d = pickle.load(input)
 
+    unnorm_train_features = d['unnorm_train']
+    unnorm_test_features = d['unnorm_test']
+    norm_pca_train_features = d['norm_train']
+    norm_pca_test_features = d['norm_test']
     traffic_classes = d['classes']
-    norm_pca_features = d['train']
-    norm_pca_test_features = d['test']
-    traffic_samples_number = d['number']
+    traffic_samples_number = d['samples_number']
 
     obs_classes = profiling.get_obs_classes(traffic_samples_number, 1,
                                             traffic_classes)
 
-    """
     Plot features
     
-    profiling.plot_features(norm_pca_features, obs_classes)
-    """
-
-    """
+    profiling.plot_features(norm_pca_train_features, obs_classes)
+    
     y_test = classification_gaussian_distribution(traffic_classes, obs_classes,
-                                                  norm_pca_features,
+                                                  norm_pca_train_features,
                                                   norm_pca_test_features)
 
     print('GAUSSIAN acc = ', accuracy_score(list(y_test.values()), obs_classes))
 
-    y_test = classification_svm(obs_classes, norm_pca_features,
+    y_test = classification_svm(obs_classes, norm_pca_train_features,
                                              norm_pca_test_features, mode=1)
 
     print('SVM acc = ', accuracy_score(list(y_test.values()), obs_classes))
 
-    y_test = classification_neural_networks(obs_classes, norm_pca_features,
+    y_test = classification_neural_networks(obs_classes, norm_pca_train_features,
                                             norm_pca_test_features)
 
     print('NN acc = ', accuracy_score(list(y_test.values()), obs_classes))
