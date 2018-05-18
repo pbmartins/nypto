@@ -39,25 +39,20 @@ def plot_3_classes(data1, name1, data2, name2, data3, name3):
 
 
 def get_obs_classes(traffic_samples_number, n_elems, traffic_classes):
-
     return np.vstack(
-        [np.ones((traffic_samples_number[t], n_elems)) * t if t < 4 else
-         np.ones((traffic_samples_number[t], n_elems)) * 4 for t in traffic_classes]
-    )
+        [np.ones((traffic_samples_number[t], n_elems)) * t for t in traffic_classes])
 
 
-def plot_features(features, traffic_classes, feature1_idx=0, feature2_idx=1):
+def plot_features(features, obs_classes, feature1_idx=0, feature2_idx=1):
     n_obs_windows, n_features = features.shape
-    obs_classes = get_obs_classes(
-        int(n_obs_windows / len(traffic_classes)), 1, traffic_classes)
-    colors = ['b', 'g', 'r']
+    colors = ['aqua', 'azure', 'black', 'brown', 'darkblue', 'darkgreen',
+              'fuchsia', 'gold', 'indigo']
 
     for i in range(n_obs_windows):
         plt.plot(features[i, feature1_idx], features[i, feature2_idx],
-                 'o' + colors[int(obs_classes[i])])
+                 'o', c=colors[int(obs_classes[i])])
 
     plt.show()
-    wait_for_enter()
 
 
 def break_train_test(data, obs_window=240, slide_window=40,

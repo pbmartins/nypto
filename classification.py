@@ -1,4 +1,3 @@
-from sklearn import metrics
 from sklearn import svm
 from sklearn.cluster import DBSCAN
 from sklearn.cluster import KMeans
@@ -56,7 +55,7 @@ def classification_gaussian_distribution(traffic_classes, obs_classes, pca_featu
 
 
 def classification_clustering(traffic_classes, obs_classes, norm_pca_features,
-                              norm_pca_test_features, n_clusters=9, eps=10000,
+                              norm_pca_test_features, n_clusters=3, eps=10000,
                               method=0):
     traffic_idx = {}
     n_obs, n_features = norm_pca_features.shape
@@ -66,7 +65,7 @@ def classification_clustering(traffic_classes, obs_classes, norm_pca_features,
         centroids = np.append(centroids, np.mean(
             norm_pca_features[(obs_classes == c).flatten(), :], axis=0))
 
-    centroids = centroids.reshape((len(traffic_classes), n_features))
+    centroids = centroids.reshape((n_clusters, n_features))
 
     cluster_method = KMeans(init=centroids, n_clusters=n_clusters) \
         if method == 0 else DBSCAN(eps=eps)
@@ -75,7 +74,7 @@ def classification_clustering(traffic_classes, obs_classes, norm_pca_features,
 
     # Determines and quantifies the presence of each original class observation
     #  in each cluster
-    clusters = np.zeros((len(traffic_classes), n_features))
+    clusters = np.zeros((n_clusters, n_features))
     for cluster in range(n_clusters):
         aux = obs_classes[(labels == cluster)]
         for c in range(n_features):
@@ -118,7 +117,7 @@ def classification_neural_networks(obs_classes, norm_pca_features,
 
     traffic_idx = {}
     clf = MLPClassifier(
-        solver='lbfgs',
+        solver='sgd',
         alpha=alpha,
         hidden_layer_sizes=(hidden_layer_size,),
         max_iter=max_iter
@@ -130,6 +129,12 @@ def classification_neural_networks(obs_classes, norm_pca_features,
         traffic_idx[i] = result[i]
 
     return traffic_idx
+
+
+def accuracy_score(y_pred, y_true):
+    hits = sum(y_true[i] == y_pred[i] or (y_true[i] >= 4 and y_pred[i] >= 4)
+               for i in range(len(y_true)))[0]
+    return hits / len(y_true)
 
 
 def main():
@@ -155,38 +160,32 @@ def main():
     norm_pca_test_features = d['test']
     traffic_samples_number = d['number']
 
-    # TODO: traffic_classes with all categories instead of joined mining datasets
-
     obs_classes = profiling.get_obs_classes(traffic_samples_number, 1,
                                             traffic_classes)
+
+    """
+    Plot features
+    
+    profiling.plot_features(norm_pca_features, obs_classes)
+    """
 
     """
     y_test = classification_gaussian_distribution(traffic_classes, obs_classes,
                                                   norm_pca_features,
                                                   norm_pca_test_features)
 
-    print('GAUSSIAN acc = ',
-          metrics.accuracy_score(list(y_test.values()), obs_classes))
-
-    y_test = classification_clustering(traffic_classes, obs_classes, norm_pca_features,
-                                norm_pca_test_features)
-
-    print('KMeans acc = ',
-          metrics.accuracy_score(list(y_test.values()), obs_classes))
-
-    """
+    print('GAUSSIAN acc = ', accuracy_score(list(y_test.values()), obs_classes))
 
     y_test = classification_svm(obs_classes, norm_pca_features,
                                              norm_pca_test_features, mode=1)
 
-    print('SVM acc = ',
-          metrics.accuracy_score(list(y_test.values()), obs_classes))
+    print('SVM acc = ', accuracy_score(list(y_test.values()), obs_classes))
 
     y_test = classification_neural_networks(obs_classes, norm_pca_features,
                                             norm_pca_test_features)
 
-    print('NN acc = ',
-          metrics.accuracy_score(list(y_test.values()), obs_classes))
+    print('NN acc = ', accuracy_score(list(y_test.values()), obs_classes))
+    """
 
 
 if __name__ == '__main__':
