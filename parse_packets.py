@@ -19,7 +19,7 @@ def save_to_file(delta, last_bytes_up, last_bytes_down,
         f.write("{} {} {} {}\n".format(last_bytes_up, last_bytes_down,
             last_npkts_up, last_npkts_down))
 
-        diff_intervals = int(delta / SAMPLE_DELTA)
+        diff_intervals = int(delta / SAMPLE_DELTA) - 1
 
         for i in range(diff_intervals):
             f.write("0 0 0 0\n")
@@ -40,7 +40,7 @@ def process_packets(tcp_cap):
             ip = LOCAL_IPV6
             src = packet.ipv6.src
             dst = packet.ipv6.dst
-            size = packet.ipv6.plen
+            size = int(packet.ipv6.plen)
         else:
             ip = LOCAL_IP
             src = packet.ip.src
@@ -116,7 +116,7 @@ def main():
     LOCAL_IPV6 = args.ipv6 if args.ipv6 is not None else LOCAL_IPV6
 
     if os.path.exists(OUTFILE_PATH):
-        if input('Write over file? [y/N]') == 'y':
+        if input('Write over file? [y/N] ') == 'y':
             os.remove(OUTFILE_PATH)
         else:
             exit()
