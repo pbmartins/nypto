@@ -81,16 +81,22 @@ def break_train_test(data, obs_window=240, slide_window=40,
 def extract_features(data):
     percentils = [75, 90, 95]
     n_obs_windows, n_samples, n_cols = data.shape
-    features = np.array([np.hstack((
-        np.mean(data[i, :, :], axis=0),
-        np.median(data[i, :, :], axis=0),
-        np.std(data[i, :, :], axis=0),
-        stats.skew(data[i, :, :]),
-        stats.kurtosis(data[i, :, :]),
-        np.array(np.percentile(data[i, :, :], percentils, axis=0)).T.flatten(),
-    )) for i in range(n_obs_windows)])
-
-    return features
+    features = []
+    empty_windows = []
+    for i in range(n_obs_windows):
+        mean = np.mean(data[i, :, :], axis=0)
+        if mean[2] == 0.0 and mean[3] == 0.0:
+            empty_windows.append(i)
+        else:
+            features.append(np.hstack((
+                mean,
+                np.median(data[i, :, :], axis=0),
+                np.std(data[i, :, :], axis=0),
+                stats.skew(data[i, :, :]),
+                stats.kurtosis(data[i, :, :]),
+                np.array(np.percentile(data[i, :, :], percentils, axis=0)).T.flatten(),
+            )))
+    return empty_windows, np.array(features)
 
 
 def extract_silence(data, threshold=256):
@@ -103,18 +109,19 @@ def extract_silence(data, threshold=256):
             elif data[i - 1] <= threshold:
                 s[-1] += 1
 
-    return s if s != [] else [0]
+    return s[1:-1] if len(s) > 2 else [0]
 
 
-def extract_features_silence(data):
+def extract_features_silence(data, empty_windows):
     features = []
     n_obs_windows, n_samples, n_cols = data.shape
-    # Rebenta caso o threshold the silêncio seja 0
 
     for i in range(n_obs_windows):
+        if i in empty_windows:
+            continue
         silence_features = np.array([])
         for c in range(n_cols):
-            silence = extract_silence(data[i, :, c], threshold=250)
+            silence = extract_silence(data[i, :, c], threshold=0)
             silence_features = np.append(
                 silence_features, [np.mean(silence), np.var(silence)])
 
@@ -123,11 +130,13 @@ def extract_features_silence(data):
     return np.array(features)
 
 
-def extract_features_wavelet(data, scales=[2, 4, 8, 16, 32]):
+def extract_features_wavelet(data, empty_windows, scales=[2, 4, 8, 16, 32]):
     features = []
     n_obs_windows, n_samples, n_cols = data.shape
 
     for i in range(n_obs_windows):
+        if i in empty_windows:
+            continue
         scalogram_features = np.array([])
         for c in range(n_cols):
             scalo, scales = scalogram.scalogramCWT(data[i, :, c], scales)
@@ -144,14 +153,15 @@ def traffic_profiling(dataset_path, traffic_class, plot=True):
     if plot:
         plot_traffic_class(dataset, traffic_class)
 
-    scales = [2, 4, 8, 16, 32, 64, 128, 256]
+    scales = [2, 4, 8]
     data_train, data_test = break_train_test(dataset, random_split=True)
-    features = extract_features(data_train)
-    test_features = extract_features(data_test)
-    features_silence = extract_features_silence(data_train)
-    test_features_silence = extract_features_silence(data_test)
-    features_wavelet = extract_features_wavelet(data_train, scales)
-    test_features_wavelet = extract_features_wavelet(data_test, scales)
+    empty_windows_train, features = extract_features(data_train)
+    empty_windows_test, test_features = extract_features(data_test)
+    features_silence = extract_features_silence(data_train, empty_windows_train)
+    test_features_silence = extract_features_silence(data_test, empty_windows_test)
+    features_wavelet = extract_features_wavelet(data_train, empty_windows_train, scales)
+    np.save('data.sav', data_train)
+    test_features_wavelet = extract_features_wavelet(data_test, empty_windows_test, scales)
     n_obs_windows = data_train.shape[0]
 
     return features, features_silence, features_wavelet, test_features, \
@@ -218,7 +228,7 @@ def extract_traffic_features(traffic_classes, datasets_filepath):
     """
 
     # Training features
-    all_features = np.hstack((features, features_silence))
+    all_features = np.hstack((features, features_silence, features_wavelet))
 
     # Testing features (size must be the same than the training)
     all_test_features = np.hstack((
@@ -236,31 +246,31 @@ def extract_traffic_features(traffic_classes, datasets_filepath):
 
 def profiling():
     traffic_classes = {
-        0: 'YouTube',
-        1: 'Netflix',
-        2: 'Browsing',
-        3: 'Social Networking',
+        # 0: 'YouTube',
+        # 1: 'Netflix',
+        # 2: 'Browsing',
+        # 3: 'Social Networking',
         4: 'Mining (Neoscrypt - 4T CPU)',
-        5: 'Mining (Neoscrypt - 2T CPU)',
-        6: 'Mining (EquiHash - 65p GPU)',
-        7: 'Mining (EquiHash - 85p GPU)',
-        8: 'Mining (EquiHash - 100p GPU)',
+        # 5: 'Mining (Neoscrypt - 2T CPU)',
+        # 6: 'Mining (EquiHash - 65p GPU)',
+        # 7: 'Mining (EquiHash - 85p GPU)',
+        # 8: 'Mining (EquiHash - 100p GPU)',
     }
 
     datasets_filepath = {
-        0: 'datasets/youtube.dat',
-        1: 'datasets/netflix.dat',
-        2: 'datasets/browsing.dat',
-        3: 'datasets/social-network.dat',
+        # 0: 'datasets/youtube.dat',
+        # 1: 'datasets/netflix.dat',
+        # 2: 'datasets/browsing.dat',
+        # 3: 'datasets/social-network.dat',
         4: 'datasets/mining_4t_nicehash.dat',
-        5: 'datasets/mining_2t_nicehash.dat',
-        6: 'datasets/mining_gpu_nicehash_equihash_1070_60p.dat',
-        7: 'datasets/mining_gpu_nicehash_equihash_1080ti_85p.dat',
-        8: 'datasets/mining_gpu_nicehash_equihash_1080ti_100p.dat',
+        # 5: 'datasets/mining_2t_nicehash.dat',
+        # 6: 'datasets/mining_gpu_nicehash_equihash_1070_60p.dat',
+        # 7: 'datasets/mining_gpu_nicehash_equihash_1080ti_85p.dat',
+        # 8: 'datasets/mining_gpu_nicehash_equihash_1080ti_100p.dat',
     }
     plt.ion()
 
-    return extract_traffic_features(traffic_classes, datasets_filepath)
+    print( extract_traffic_features(traffic_classes, datasets_filepath) )
 
 
 if __name__ == '__main__':
