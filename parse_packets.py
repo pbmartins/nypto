@@ -12,17 +12,17 @@ REMOTE_PORTS = [3341, 3333, 3334, 3357, 80, 443]
 
 
 def save_to_file(delta, last_bytes_up, last_bytes_down,
-        last_npkts_up, last_npkts_down, last_nsyns_up, last_nsyns_down):
+        last_npkts_up, last_npkts_down):
     global OUTFILE_PATH
 
     with open(OUTFILE_PATH, "a") as f:
-        f.write("{} {} {} {} {} {}\n".format(last_bytes_up, last_bytes_down,
-            last_npkts_up, last_npkts_down, last_nsyns_up, last_nsyns_down))
+        f.write("{} {} {} {}\n".format(last_bytes_up, last_bytes_down,
+            last_npkts_up, last_npkts_down))
 
         diff_intervals = int(delta / SAMPLE_DELTA)
 
         for i in range(diff_intervals):
-            f.write("0 0 0 0 0 0\n")
+            f.write("0 0 0 0\n")
 
 
 def process_packets(tcp_cap):
@@ -33,8 +33,6 @@ def process_packets(tcp_cap):
     last_bytes_down = 0
     last_npkts_up = 0
     last_npkts_down = 0
-    last_nsyns_up = 0
-    last_nsyns_down = 0
 
     for packet in tcp_cap:
         packet_type = -1
@@ -42,10 +40,12 @@ def process_packets(tcp_cap):
             ip = LOCAL_IPV6
             src = packet.ipv6.src
             dst = packet.ipv6.dst
+            size = packet.ipv6.plen
         else:
             ip = LOCAL_IP
             src = packet.ip.src
             dst = packet.ip.dst
+            size = int(packet.ip.get_field('Len'))
 
         if src == ip and int(packet.tcp.get_field('DstPort')) in REMOTE_PORTS:
             packet_type = 0
@@ -55,52 +55,38 @@ def process_packets(tcp_cap):
         if packet_type == 0:
             if last_timestamp is None:
                 last_timestamp = float(packet.sniff_timestamp)
-                last_bytes_down += int(packet.tcp.get_field('Len'))
+                last_bytes_down += size
                 last_npkts_down += 1
-                last_nsyns_down += 1 if packet.tcp.get_field(
-                        'Flags').main_field.hex_value & 18 == 18 else 0
             else:
                 time_delta = float(packet.sniff_timestamp) - last_timestamp
                 if time_delta > SAMPLE_DELTA:
                     save_to_file(time_delta, last_bytes_up, last_bytes_down,
-                            last_npkts_up, last_npkts_down, last_nsyns_up, 
-                            last_nsyns_down)
+                            last_npkts_up, last_npkts_down)
                     last_timestamp = float(packet.sniff_timestamp)
-                    last_bytes_down = int(packet.tcp.get_field('Len'))
+                    last_bytes_down = size
                     last_npkts_down = 1
-                    last_nsyns_down = 1 if packet.tcp.get_field(
-                            'Flags').main_field.hex_value & 18 == 18 else 0
                 else:
-                    last_bytes_down += int(packet.tcp.get_field('Len'))
+                    last_bytes_down += size
                     last_npkts_down += 1
-                    last_nsyns_down += 1 if packet.tcp.get_field(
-                            'Flags').main_field.hex_value & 18 == 18 else 0
         elif packet_type == 1:
             if last_timestamp is None:
                 last_timestamp = float(packet.sniff_timestamp)
-                last_bytes_up += int(packet.tcp.get_field('Len'))
+                last_bytes_up += size
                 last_npkts_up += 1
-                last_nsyns_up += 1 if packet.tcp.get_field(
-                        'Flags').main_field.hex_value & 18 == 18 else 0
             else:
                 time_delta = float(packet.sniff_timestamp) - last_timestamp
                 if time_delta > SAMPLE_DELTA:
                     save_to_file(time_delta, last_bytes_up, last_bytes_down,
-                            last_npkts_up, last_npkts_down, last_nsyns_up, 
-                            last_nsyns_down)
+                            last_npkts_up, last_npkts_down)
                     last_timestamp = float(packet.sniff_timestamp)
-                    last_bytes_up = int(packet.tcp.get_field('Len'))
+                    last_bytes_up = size
                     last_npkts_up = 1
-                    last_nsyns_up = 1 if packet.tcp.get_field(
-                            'Flags').main_field.hex_value & 18 == 18 else 0
                 else:
-                    last_bytes_up += int(packet.tcp.get_field('Len'))
+                    last_bytes_up += size
                     last_npkts_up += 1
-                    last_nsyns_up += 1 if packet.tcp.get_field(
-                            'Flags').main_field.hex_value & 18 == 18 else 0
 
     save_to_file(0, last_bytes_up, last_bytes_down, last_npkts_up,
-            last_npkts_down, last_nsyns_up, last_nsyns_down)
+            last_npkts_down)
 
 
 def main():

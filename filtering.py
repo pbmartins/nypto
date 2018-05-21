@@ -96,6 +96,8 @@ def pkt_callback(pkt):
     global LOCAL_IPS
     global TCP_PORTS
 
+    print(pkt)
+
     src_ip = IPAddress(pkt.ip.src)
     dst_ip = IPAddress(pkt.ip.dst)
     src_port = pkt.tcp.srcport
@@ -182,9 +184,9 @@ def main():
     TRAFFIC_STATS = \
         np.zeros((IP_ALLOCATE, PORT_ALLOCATE, WINDOW_DELTA, N_FEATURES))
 
-    if not os.path.isdir(OUTFILE_PATH):
-        print("Invalid samples directory")
-        exit(1)
+    #if not os.path.isdir(OUTFILE_PATH):
+    #    print("Invalid samples directory")
+    #    exit(1)
 
     try:
         capture = pyshark.LiveCapture(interface=net_interface, bpf_filter='tcp')
