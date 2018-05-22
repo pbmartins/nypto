@@ -139,7 +139,7 @@ def extract_features_wavelet(data, empty_windows, scales=[2, 4, 8, 16, 32]):
             continue
         scalogram_features = np.array([])
         for c in range(n_cols):
-            scalo, scales = scalogram.scalogramCWT(data[i, :, c], scales)
+            scalo, fscales = scalogram.scalogramCWT(data[i, :, c], scales)
             scalogram_features = np.append(scalogram_features, scalo)
 
         features.append(scalogram_features)
