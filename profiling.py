@@ -232,8 +232,9 @@ def extract_traffic_features(traffic_classes, datasets_filepath):
     # Testing features (size must be the same than the training)
     all_test_features = np.hstack((
         test_features[:features.shape[0]],
-        test_features_silence[:features_silence.shape[0]])
-    )
+        test_features_silence[:features_silence.shape[0]],
+        test_features_wavelet[:features_wavelet.shape[0]]
+    ))
 
     # Normalize train and test features
     norm_pca_train_features, norm_pca_test_features = normalize_features(all_features,
