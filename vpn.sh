@@ -6,6 +6,10 @@ MINING=(
     mining_gpu_nicehash_equihash_1070_60p
     mining_gpu_nicehash_equihash_1080ti_85p
     mining_gpu_nicehash_equihash_1080ti_100p
+    browsing
+    netflix
+    social-network
+    youtube
 )
 
 TRAFFIC=(
