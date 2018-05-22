@@ -1,6 +1,7 @@
 from sklearn import svm
 from sklearn.cluster import DBSCAN
 from sklearn.cluster import KMeans
+from sklearn.externals import joblib
 from sklearn.neural_network import MLPClassifier
 from scipy.stats import multivariate_normal
 import numpy as np
@@ -117,12 +118,16 @@ def classification_neural_networks(obs_classes, norm_pca_features,
 
     traffic_idx = {}
     clf = MLPClassifier(
-        solver='sgd',
+        solver='lbfgs',
         alpha=alpha,
         hidden_layer_sizes=(hidden_layer_size,),
         max_iter=max_iter
     )
     clf.fit(norm_pca_features, obs_classes)
+
+    # Save model
+    joblib.dump(clf, 'nn_model.sav')
+
     result = clf.predict(norm_pca_test_features)
 
     for i in range(norm_pca_test_features.shape[0]):
@@ -138,11 +143,11 @@ def accuracy_score(y_pred, y_true):
 
 
 def main():
-    """
     unnorm_train_features, unnorm_test_features, \
     norm_pca_train_features, norm_pca_test_features, \
     traffic_classes, traffic_samples_number = profiling.profiling()
 
+    # Save profiling data
     d = {
         'unnorm_train': unnorm_train_features,
         'unnorm_test': unnorm_test_features,
@@ -156,7 +161,8 @@ def main():
         pickle.dump(d, output, pickle.HIGHEST_PROTOCOL)
 
     """
-
+    Load data
+    
     with open('input_data.pkl', 'rb') as input:
         d = pickle.load(input)
 
@@ -166,13 +172,14 @@ def main():
     norm_pca_test_features = d['norm_test']
     traffic_classes = d['classes']
     traffic_samples_number = d['samples_number']
+    """
 
     obs_classes = profiling.get_obs_classes(traffic_samples_number, 1,
                                             traffic_classes)
 
     profiling.plot_features(unnorm_train_features, obs_classes)
 
-    """
+
     y_test = classification_gaussian_distribution(traffic_classes, obs_classes,
                                                   norm_pca_train_features,
                                                   norm_pca_test_features)
@@ -188,7 +195,6 @@ def main():
                                             norm_pca_test_features)
 
     print('NN acc = ', accuracy_score(list(y_test.values()), obs_classes))
-    """
 
 
 if __name__ == '__main__':

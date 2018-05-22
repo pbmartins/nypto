@@ -160,7 +160,6 @@ def traffic_profiling(dataset_path, traffic_class, plot=True):
     features_silence = extract_features_silence(data_train, empty_windows_train)
     test_features_silence = extract_features_silence(data_test, empty_windows_test)
     features_wavelet = extract_features_wavelet(data_train, empty_windows_train, scales)
-    np.save('data.sav', data_train)
     test_features_wavelet = extract_features_wavelet(data_test, empty_windows_test, scales)
     n_obs_windows = data_train.shape[0]
 
@@ -322,7 +321,7 @@ def profiling():
     }
     plt.ion()
 
-    print( extract_traffic_features(traffic_classes, datasets_filepath) )
+    return extract_traffic_features(traffic_classes, datasets_filepath)
 
 
 if __name__ == '__main__':
