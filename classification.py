@@ -137,7 +137,7 @@ def classification_neural_networks(obs_classes, norm_pca_features,
 
 
 def accuracy_score(y_pred, y_true):
-    hits = sum(y_true[i] == y_pred[i] or (y_true[i] >= 10 and y_pred[i] >= 10)
+    hits = sum(y_true[i] == y_pred[i] or (y_true[i] >= 13 and y_pred[i] >= 13)
                for i in range(len(y_true)))[0]
     return hits / len(y_true)
 
