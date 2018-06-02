@@ -276,7 +276,7 @@ def profiling():
         27: 'Mining (Equihash - 60p GPU) & Netflix',
         28: 'Mining (Equihash - 60p GPU) & Social Networking',
         29: 'Mining (Equihash - 60p GPU) & Youtube',
-        20: 'Mining (Equihash - 85p GPU) & Browsing',
+        30: 'Mining (Equihash - 85p GPU) & Browsing',
         31: 'Mining (Equihash - 85p GPU) & Netflix',
         32: 'Mining (Equihash - 85p GPU) & Social Networking',
         33: 'Mining (Equihash - 85p GPU) & Youtube',

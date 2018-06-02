@@ -178,7 +178,7 @@ def main():
     obs_classes = profiling.get_obs_classes(traffic_samples_number, 1,
                                             traffic_classes)
 
-    profiling.plot_features(unnorm_train_features, obs_classes)
+    #profiling.plot_features(unnorm_train_features, obs_classes)
 
 
     y_test = classification_gaussian_distribution(traffic_classes, obs_classes,
