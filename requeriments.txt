@@ -2,3 +2,5 @@ sklearn
 numpy
 scipy
 matplotlib
+netaddr
+argparse

@@ -22,6 +22,7 @@ TRAFFIC_STATS = None
 LOCAL_IPS = {}
 REMOTE_IPS = {}
 TCP_PORTS = {}
+BASE_TIMESTAMP = None
 
 
 def add_new_src_ip():
@@ -99,6 +100,7 @@ def classify(local_ip, remote_ip, remote_port):
     dst_idx = REMOTE_IPS[remote_ip]
     port_idx = TCP_PORTS[remote_port]
 
+    print("DST -> {}:{}".format(remote_ip, remote_port))
     print(TRAFFIC_STATS[src_idx][dst_idx][port_idx])
 
     # Traffic profiling
@@ -124,8 +126,7 @@ def pkt_callback(pkt):
     global LOCAL_IPS
     global REMOTE_IPS
     global TCP_PORTS
-
-    print(pkt)
+    global BASE_TIMESTAMP
 
     src_ip = IPAddress(pkt.ip.src)
     dst_ip = IPAddress(pkt.ip.dst)
@@ -167,22 +168,25 @@ def pkt_callback(pkt):
     info = TRAFFIC_STATS[src_idx][dst_idx][port_idx]
     N_PACKETS += 1
 
-    time_delta = float(pkt.sniff_timestamp) - info[0][0] if info[0][0] != -1 \
-        else float(pkt.sniff_timestamp)
-    idx = 0 if time_delta == 0 else int(time_delta / SAMPLE_DELTA)
+    BASE_TIMESTAMP = float(pkt.sniff_timestamp) if BASE_TIMESTAMP is None \
+            else BASE_TIMESTAMP
 
-    if idx > WINDOW_DELTA:
+    timestamp = float(pkt.sniff_timestamp) - BASE_TIMESTAMP
+    time_delta = timestamp - info[0][0] if info[0][0] != -1 else timestamp
+    idx = 0 if time_delta == 0 else int(time_delta / SAMPLE_DELTA)
+    #print("Time delta: ", time_delta)
+    #print("IDX: ", idx)
+
+    if idx >= WINDOW_DELTA:
         rtn = classify(local_ip, remote_ip, remote_port)
         TRAFFIC_STATS[src_idx][dst_idx][port_idx] = \
             np.zeros((WINDOW_DELTA, N_FEATURES))
         TRAFFIC_STATS[src_idx][dst_idx][port_idx][0][0] = rtn
         idx = 0
-        info[idx][0] = int(pkt.sniff_timestamp)
+        info[idx][0] = timestamp
 
-    info[idx][1+up_down] += int(pkt.tcp.get_field('Len'))
+    info[idx][1+up_down] += int(pkt.ip.get_field('Len'))
     info[idx][3+up_down] += 1
-    info[idx][5+up_down] += 1 if pkt.tcp.get_field(
-        'Flags').main_field.hex_value & 18 == 18 else 0
 
     TRAFFIC_STATS[src_idx][dst_idx][port_idx] = info
 
@@ -217,7 +221,8 @@ def main():
     CLIENT_NETS_SET = IPSet(client_networks)
 
     net_interface = args.interface
-    print('TCP filter active on {}'.format(net_interface))
+    print('TCP filter active on {} applied to the following '
+            'networks: {}'.format(net_interface, CLIENT_NETS_SET))
 
     SAMPLE_DELTA = args.sampwindow if args.sampwindow is not None else SAMPLE_DELTA
 
@@ -230,7 +235,7 @@ def main():
         capture.apply_on_packets(pkt_callback)
     except KeyboardInterrupt:
         print('\n{} packets captured! Done!\n'.format(N_PACKETS))
-        print(0)
+        exit()
 
 
 if __name__ == '__main__':
