@@ -144,15 +144,19 @@ def accuracy_score(y_pred, y_true):
     return hits / len(y_true)
 
 
-def classify_live_data(norm_pca_features):
+def classify_live_data(norm_pca_features, mining_threshold=0.7):
     model = joblib.load('classification-model/classification_model.sav')
     result = model.predict(norm_pca_features)
 
     ordered_class = sorted(result)
-    classes = {key: len(list(group)) for key, group in groupby(ordered_class)}
+    classes = {key: len(list(group)) / len(result)
+               for key, group in groupby(ordered_class)}
     traffic_class = max(classes)
 
-    return traffic_class
+    if traffic_class >= 13 and classes[traffic_class] >= mining_threshold:
+        return traffic_class, classes[traffic_class]
+
+    return None, None
 
 
 def main():

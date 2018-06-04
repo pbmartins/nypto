@@ -109,11 +109,12 @@ def classify(local_ip, remote_ip, remote_port):
     norm_pca_features = normalize_live_features(all_features)
 
     # Traffic classification
-    traffic_class = classify_live_data(norm_pca_features)
-    if traffic_class == 1:
+    traffic_class, class_percent = classify_live_data(norm_pca_features)
+    if traffic_class is not None:
         # Block in the firewall
         print("TCP flow with src IP {} and dst IP {} is running mining "
-              "on port {}".format(local_ip, remote_ip, remote_port))
+              "on port {} with {}% accuracy".format(
+            local_ip, remote_ip, remote_port, class_percent))
 
         return -1
 
@@ -194,10 +195,10 @@ def pkt_callback(pkt):
 def main():
     global CLIENT_NETS_SET
     global SAMPLE_DELTA
-    global IP_ALLOCATE
+    global SRC_IP_ALLOCATE
+    global DST_IP_ALLOCATE
     global TCP_PORT_ALLOCATE
     global TRAFFIC_STATS
-    global TRAFFIC_CLASSIFICATIONS
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--interface', nargs='?',
