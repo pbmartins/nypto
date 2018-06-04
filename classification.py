@@ -119,7 +119,7 @@ def classification_neural_networks(obs_classes, norm_pca_features,
 
     traffic_idx = {}
     clf = MLPClassifier(
-        solver='lbfgs',
+        solver='sgd',
         alpha=alpha,
         hidden_layer_sizes=(hidden_layer_size,),
         max_iter=max_iter
@@ -128,7 +128,7 @@ def classification_neural_networks(obs_classes, norm_pca_features,
 
     # Save model
     joblib.dump(clf, 'classification-model/classfication_model.sav')
-
+    
     result = clf.predict(norm_pca_test_features)
 
     for i in range(norm_pca_test_features.shape[0]):
@@ -160,6 +160,10 @@ def classify_live_data(norm_pca_features, mining_threshold=0.7):
 
 
 def main():
+
+    """
+    # Generate new profiled data
+
     unnorm_train_features, unnorm_test_features, \
     norm_pca_train_features, norm_pca_test_features, \
     traffic_classes, traffic_samples_number = profiling.profiling()
@@ -174,13 +178,14 @@ def main():
         'samples_number': traffic_samples_number
     }
 
-    with open('input_data.pkl', 'wb') as output:
+    with open('profiled-data/input_data.pkl', 'wb') as output:
         pickle.dump(d, output, pickle.HIGHEST_PROTOCOL)
 
     """
-    Load data
     
-    with open('input_data.pkl', 'rb') as input:
+    # Load saved profiled data
+    
+    with open('profiled-data/input_data.pkl', 'rb') as input:
         d = pickle.load(input)
 
     unnorm_train_features = d['unnorm_train']
@@ -189,13 +194,14 @@ def main():
     norm_pca_test_features = d['norm_test']
     traffic_classes = d['classes']
     traffic_samples_number = d['samples_number']
-    """
 
     obs_classes = profiling.get_obs_classes(traffic_samples_number, 1,
                                             traffic_classes)
-
+    
+    # Plot unnormalized features
     #profiling.plot_features(unnorm_train_features, obs_classes)
 
+    # Classify using just some algorithms
 
     y_test = classification_gaussian_distribution(traffic_classes, obs_classes,
                                                   norm_pca_train_features,
@@ -204,7 +210,7 @@ def main():
     print('GAUSSIAN acc = ', accuracy_score(list(y_test.values()), obs_classes))
 
     y_test = classification_svm(obs_classes, norm_pca_train_features,
-                                             norm_pca_test_features, mode=1)
+                                             norm_pca_test_features, mode=0)
 
     print('SVM acc = ', accuracy_score(list(y_test.values()), obs_classes))
 
