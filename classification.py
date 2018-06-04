@@ -4,6 +4,7 @@ from sklearn.cluster import KMeans
 from sklearn.externals import joblib
 from sklearn.neural_network import MLPClassifier
 from scipy.stats import multivariate_normal
+from itertools import groupby
 import numpy as np
 import pickle
 import profiling
@@ -126,7 +127,7 @@ def classification_neural_networks(obs_classes, norm_pca_features,
     clf.fit(norm_pca_features, obs_classes)
 
     # Save model
-    joblib.dump(clf, 'nn_model.sav')
+    joblib.dump(clf, 'classification-model/classfication_model.sav')
 
     result = clf.predict(norm_pca_test_features)
 
@@ -141,6 +142,17 @@ def accuracy_score(y_pred, y_true):
             or (y_true[i] >= 13 and y_pred[i] >= 13) 
             for i in range(len(y_true)))[0]
     return hits / len(y_true)
+
+
+def classify_live_data(norm_pca_features):
+    model = joblib.load('classification-model/classification_model.sav')
+    result = model.predict(norm_pca_features)
+
+    ordered_class = sorted(result)
+    classes = {key: len(list(group)) for key, group in groupby(ordered_class)}
+    traffic_class = max(classes)
+
+    return traffic_class
 
 
 def main():

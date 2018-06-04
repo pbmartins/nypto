@@ -4,21 +4,21 @@ import argparse
 import pyshark
 import numpy as np
 from netaddr import IPNetwork, IPAddress, IPSet
-from itertools import groupby
-import classification
+from profiling import get_live_features, normalize_live_features
+from classification import classify_live_data
 
 N_PACKETS = 0
 OUTFILE_PATH = 'samples/'
 SAMPLE_DELTA = 0.5
-WINDOW_DELTA = 240
+WINDOW_SIZE = 240
+N_WINDOWS = 5
+WINDOW_DELTA = WINDOW_SIZE * N_WINDOWS
 SRC_IP_ALLOCATE = 20
 DST_IP_ALLOCATE = 100
 TCP_PORT_ALLOCATE = 20
 CLIENT_NETS_SET = None
 N_FEATURES = 7
-MAX_CLASSIFICATIONS = 5
 TRAFFIC_STATS = None
-TRAFFIC_CLASSIFICATIONS = None
 LOCAL_IPS = {}
 REMOTE_IPS = {}
 TCP_PORTS = {}
@@ -30,9 +30,7 @@ def add_new_src_ip():
     global DST_IP_ALLOCATE
     global TCP_PORT_ALLOCATE
     global N_FEATURES
-    global MAX_CLASSIFICATIONS
     global TRAFFIC_STATS
-    global TRAFFIC_CLASSIFICATIONS
 
     if len(LOCAL_IPS) <= TRAFFIC_STATS.shape[0]:
         return
@@ -44,10 +42,6 @@ def add_new_src_ip():
                           WINDOW_DELTA, N_FEATURES))
     TRAFFIC_STATS = np.vstack((TRAFFIC_STATS, new_entry))
 
-    new_entry = np.zeros((IP_ALLOCATE, remote_ips_size, tcp_ports_size,
-                          MAX_CLASSIFICATIONS))
-    TRAFFIC_CLASSIFICATIONS = np.vstack((TRAFFIC_CLASSIFICATIONS, new_entry))
-
 
 def add_new_dst_ip():
     global LOCAL_IPS
@@ -55,9 +49,7 @@ def add_new_dst_ip():
     global DST_IP_ALLOCATE
     global TCP_PORT_ALLOCATE
     global N_FEATURES
-    global MAX_CLASSIFICATIONS
     global TRAFFIC_STATS
-    global TRAFFIC_CLASSIFICATIONS
 
     if len(REMOTE_IPS) <= TRAFFIC_STATS.shape[1]:
         return
@@ -68,28 +60,17 @@ def add_new_dst_ip():
                           WINDOW_DELTA, N_FEATURES))
     new_stats = np.array([np.vstack((TRAFFIC_STATS[0], new_entry))])
 
-    new_entry_class = np.zeros((DST_IP_ALLOCATE, tcp_ports_size,
-                          MAX_CLASSIFICATIONS))
-    new_stats_class = \
-        np.array([np.vstack((TRAFFIC_CLASSIFICATIONS[0], new_entry_class))])
-
     for ip in range(1, TRAFFIC_STATS.shape[0]):
         new_stats = np.vstack((
             new_stats, [np.vstack((TRAFFIC_STATS[ip], new_entry))]))
-        new_stats_class = np.vstack((
-            new_stats_class,
-            [np.vstack((TRAFFIC_CLASSIFICATIONS[ip], new_entry_class))]))
 
     TRAFFIC_STATS = new_stats
-    TRAFFIC_CLASSIFICATIONS = new_stats_class
 
 
 def add_new_tcp_port():
     global LOCAL_IPS
     global N_FEATURES
-    global MAX_CLASSIFICATIONS
     global TRAFFIC_STATS
-    global TRAFFIC_CLASSIFICATIONS
 
     if len(TCP_PORTS) <= TRAFFIC_STATS.shape[1]:
         return
@@ -98,67 +79,41 @@ def add_new_tcp_port():
     new_entry = np.zeros((TCP_PORT_ALLOCATE, WINDOW_DELTA, N_FEATURES))
     new_stats = None
 
-    new_entry_class = np.zeros((TCP_PORT_ALLOCATE, MAX_CLASSIFICATIONS))
-    new_stats_class = None
-
     for src_ip in range(0, TRAFFIC_STATS.shape[0]):
         src_stats = np.array([np.vstack((TRAFFIC_STATS[src_ip][0], new_entry))])
-        src_stats_class = np.array(
-            [np.vstack((TRAFFIC_CLASSIFICATIONS[src_ip][0], new_entry_class))])
 
         for dst_ip in range(1, TRAFFIC_STATS.shape[1]):
             src_stats = np.vstack((
                 src_stats, [np.vstack((TRAFFIC_STATS[src_ip][dst_ip], new_entry))]))
-            src_stats_class = np.vstack((
-                src_stats_class,
-                [np.vstack((TRAFFIC_CLASSIFICATIONS[src_ip][dst_ip], new_entry_class))]))
 
         new_stats = np.array([src_stats]) if src_ip == 0 \
             else np.vstack((new_stats, [src_stats]))
-        new_stats_class = np.array([src_stats_class]) if src_ip == 0 \
-            else np.vstack((new_stats_class, [src_stats_class]))
 
     TRAFFIC_STATS = new_stats
-    TRAFFIC_CLASSIFICATIONS = new_stats_class
 
 
 def classify(local_ip, remote_ip, remote_port):
-    global MAX_CLASSIFICATIONS
     global TRAFFIC_STATS
-    global TRAFFIC_CLASSIFICATIONS
 
     src_idx = LOCAL_IPS[local_ip]
     dst_idx = REMOTE_IPS[remote_ip]
     port_idx = TCP_PORTS[remote_port]
 
     print(TRAFFIC_STATS[src_idx][dst_idx][port_idx])
-    # CALL CLASSIFY
-    # traffic_class = classify(...)
-    traffic_class = 1
 
-    class_idx = 0
-    for idx in TRAFFIC_CLASSIFICATIONS[src_idx][dst_idx][port_idx]:
-        if TRAFFIC_CLASSIFICATIONS[src_idx][dst_idx][port_idx][idx] == 0:
-            class_idx = idx
-            break
+    # Traffic profiling
+    f, fs, fw = get_live_features(TRAFFIC_STATS[src_idx][dst_idx][port_idx])
+    all_features = np.hstack((f, fs, fw))
+    norm_pca_features = normalize_live_features(all_features)
 
-    TRAFFIC_CLASSIFICATIONS[src_idx][dst_idx][port_idx][class_idx] = traffic_class
+    # Traffic classification
+    traffic_class = classify_live_data(norm_pca_features)
+    if traffic_class == 1:
+        # Block in the firewall
+        print("TCP flow with src IP {} and dst IP {} is running mining "
+              "on port {}".format(local_ip, remote_ip, remote_port))
 
-    # Classify traffic based on historic
-    if class_idx == MAX_CLASSIFICATIONS - 1:
-        ordered_class = sorted(TRAFFIC_CLASSIFICATIONS[src_idx][dst_idx][port_idx])
-        classes = {key: len(list(group)) for key, group in groupby(ordered_class)}
-        traffic_class = max(classes)
-
-        # If it is mining
-        if traffic_class == 1:
-            # Block in the firewall
-            print("TCP flow with src IP {} and dst IP {} is running mining "
-                  "on port {}".format(local_ip, remote_ip, remote_port))
-
-            # Update classification matrix
-            TRAFFIC_CLASSIFICATIONS[src_idx][dst_idx][port_idx] = np.zeros((1, MAX_CLASSIFICATIONS))
-            return -1
+        return -1
 
     return 0
 
@@ -269,9 +224,6 @@ def main():
     TRAFFIC_STATS = \
         np.zeros((SRC_IP_ALLOCATE, DST_IP_ALLOCATE, TCP_PORT_ALLOCATE,
                   WINDOW_DELTA, N_FEATURES))
-    TRAFFIC_CLASSIFICATIONS = \
-        np.zeros((SRC_IP_ALLOCATE, DST_IP_ALLOCATE, TCP_PORT_ALLOCATE,
-                  MAX_CLASSIFICATIONS))
 
     try:
         capture = pyshark.LiveCapture(interface=net_interface, bpf_filter='tcp')

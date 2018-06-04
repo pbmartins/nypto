@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.stats as stats
 import matplotlib.pyplot as plt
+from sklearn.externals import joblib
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 import sys
@@ -147,14 +148,28 @@ def extract_features_wavelet(data, empty_windows, scales=[2, 4, 8, 16, 32]):
     return np.array(features)
 
 
-def traffic_profiling(dataset_path, traffic_class, plot=True):
+def get_live_features(data_test):
+    scales = [2, 4, 8]
+    data_train, data_test = break_train_test(
+        data_test, train_percentage=0.0, random_split=True)
+    empty_windows_test, test_features = extract_features(data_test)
+    test_features_silence = extract_features_silence(data_test, empty_windows_test)
+    test_features_wavelet = extract_features_wavelet(
+        data_test, empty_windows_test, scales)
+
+    return test_features, test_features_silence, test_features_wavelet
+
+
+def traffic_profiling(dataset_path, traffic_class, plot=True,
+                      train_percentage=0.5):
     dataset = np.loadtxt(dataset_path)
 
     if plot:
         plot_traffic_class(dataset, traffic_class)
 
     scales = [2, 4, 8]
-    data_train, data_test = break_train_test(dataset, random_split=True)
+    data_train, data_test = break_train_test(
+        dataset, train_percentage=train_percentage, random_split=True)
     empty_windows_train, features = extract_features(data_train)
     empty_windows_test, test_features = extract_features(data_test)
     features_silence = extract_features_silence(data_train, empty_windows_train)
@@ -167,7 +182,18 @@ def traffic_profiling(dataset_path, traffic_class, plot=True):
            test_features_silence, test_features_wavelet, n_obs_windows
 
 
-def normalize_features(features, test_features):
+def normalize_live_features(test_features):
+    scaler = StandardScaler()
+    normalized_test_features = scaler.fit_transform(test_features)
+
+    pca = joblib.load('classification-model/pca_model.sav')
+    normalized_pca_test_features = pca.fit(normalized_test_features). \
+        transform(normalized_test_features)
+
+    return normalized_pca_test_features
+
+
+def normalize_train_features(features, test_features):
     scaler = StandardScaler()
     normalized_features = scaler.fit_transform(features)
     normalized_test_features = scaler.fit_transform(test_features)
@@ -177,6 +203,8 @@ def normalize_features(features, test_features):
         transform(normalized_features)
     normalized_pca_test_features = pca.fit(normalized_test_features). \
         transform(normalized_test_features)
+
+    joblib.dump(pca, 'classification-model/pca_model.sav')
 
     return normalized_pca_features, normalized_pca_test_features
 
@@ -237,8 +265,8 @@ def extract_traffic_features(traffic_classes, datasets_filepath):
     ))
 
     # Normalize train and test features
-    norm_pca_train_features, norm_pca_test_features = normalize_features(all_features,
-                                                                   all_test_features)
+    norm_pca_train_features, norm_pca_test_features = normalize_train_features(all_features,
+                                                                               all_test_features)
 
     return all_features, all_test_features, norm_pca_train_features, \
            norm_pca_test_features, traffic_classes, traffic_samples_number
