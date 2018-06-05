@@ -58,6 +58,9 @@ def plot_features(features, obs_classes, feature1_idx=0, feature2_idx=1):
 
 def break_train_test(data, obs_window=240, slide_window=40,
                      train_percentage=0.5, random_split=True):
+    if len(data) <= obs_window:
+        return np.array([data]), np.array([data])
+
     window_size = int(obs_window / slide_window)
     n_samples, n_cols = data.shape
     n_obs_windows = int((n_samples - obs_window) / slide_window)
@@ -148,7 +151,7 @@ def extract_features_wavelet(data, empty_windows, scales=[2, 4, 8, 16, 32]):
     return np.array(features)
 
 
-def get_live_features(data_test):
+def extract_live_features(data_test):
     scales = [2, 4, 8]
     data_train, data_test = break_train_test(
         data_test, train_percentage=0.0, random_split=True)

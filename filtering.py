@@ -4,7 +4,7 @@ import argparse
 import pyshark
 import numpy as np
 from netaddr import IPNetwork, IPAddress, IPSet
-from profiling import get_live_features, normalize_live_features
+from profiling import extract_live_features, normalize_live_features
 from classification import classify_live_data
 
 N_PACKETS = 0
@@ -17,7 +17,7 @@ SRC_IP_ALLOCATE = 20
 DST_IP_ALLOCATE = 100
 TCP_PORT_ALLOCATE = 20
 CLIENT_NETS_SET = None
-N_FEATURES = 7
+N_FEATURES = 5
 TRAFFIC_STATS = None
 LOCAL_IPS = {}
 REMOTE_IPS = {}
@@ -39,8 +39,8 @@ def add_new_src_ip():
     # Pre allocate memory space
     remote_ips_size = TRAFFIC_STATS.shape[1]
     tcp_ports_size = TRAFFIC_STATS.shape[2]
-    new_entry = np.zeros((IP_ALLOCATE, remote_ips_size, tcp_ports_size,
-                          WINDOW_DELTA, N_FEATURES))
+    new_entry = np.zeros((SRC_IP_ALLOCATE, DST_IP_ALLOCATE, remote_ips_size,
+                          tcp_ports_size, WINDOW_DELTA, N_FEATURES))
     TRAFFIC_STATS = np.vstack((TRAFFIC_STATS, new_entry))
 
 
@@ -104,7 +104,8 @@ def classify(local_ip, remote_ip, remote_port):
     print(TRAFFIC_STATS[src_idx][dst_idx][port_idx])
 
     # Traffic profiling
-    f, fs, fw = get_live_features(TRAFFIC_STATS[src_idx][dst_idx][port_idx])
+    dataset = TRAFFIC_STATS[src_idx][dst_idx][port_idx][:, 1:]
+    f, fs, fw = extract_live_features(dataset)
     all_features = np.hstack((f, fs, fw))
     norm_pca_features = normalize_live_features(all_features)
 
@@ -117,6 +118,8 @@ def classify(local_ip, remote_ip, remote_port):
             local_ip, remote_ip, remote_port, class_percent))
 
         return -1
+
+    print("NOT MINING")
 
     return 0
 
@@ -175,8 +178,6 @@ def pkt_callback(pkt):
     timestamp = float(pkt.sniff_timestamp) - BASE_TIMESTAMP
     time_delta = timestamp - info[0][0] if info[0][0] != -1 else timestamp
     idx = 0 if time_delta == 0 else int(time_delta / SAMPLE_DELTA)
-    #print("Time delta: ", time_delta)
-    #print("IDX: ", idx)
 
     if idx >= WINDOW_DELTA:
         rtn = classify(local_ip, remote_ip, remote_port)
