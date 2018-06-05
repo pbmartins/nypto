@@ -23,6 +23,7 @@ LOCAL_IPS = {}
 REMOTE_IPS = {}
 TCP_PORTS = {}
 BASE_TIMESTAMP = None
+MINING_THRESHOLD = 0.5
 
 
 def add_new_src_ip():
@@ -95,27 +96,34 @@ def add_new_tcp_port():
 
 def classify(local_ip, remote_ip, remote_port):
     global TRAFFIC_STATS
+    global MINING_THRESHOLD
 
     src_idx = LOCAL_IPS[local_ip]
     dst_idx = REMOTE_IPS[remote_ip]
     port_idx = TCP_PORTS[remote_port]
 
     print("DST -> {}:{}".format(remote_ip, remote_port))
-    print(TRAFFIC_STATS[src_idx][dst_idx][port_idx])
+    #print(TRAFFIC_STATS[src_idx][dst_idx][port_idx])
 
     # Traffic profiling
     dataset = TRAFFIC_STATS[src_idx][dst_idx][port_idx][:, 1:]
     f, fs, fw = extract_live_features(dataset)
     all_features = np.hstack((f, fs, fw))
+
+    if all_features.shape[0] == 0:
+        print("No features could be extracted from TCP flow with src IP {} and "
+              "dst IP {} on port {}.".format(local_ip, remote_ip, remote_port))
+        return -1
+
     norm_pca_features = normalize_live_features(all_features)
 
     # Traffic classification
-    traffic_class, class_percent = classify_live_data(norm_pca_features)
-    if traffic_class is not None:
+    classes = classify_live_data(norm_pca_features)
+    if classes['min'] >= MINING_THRESHOLD:
         # Block in the firewall
         print("TCP flow with src IP {} and dst IP {} is running mining "
               "on port {} with {}% accuracy".format(
-            local_ip, remote_ip, remote_port, class_percent))
+            local_ip, remote_ip, remote_port, class_percent*100))
 
         return -1
 
@@ -200,14 +208,15 @@ def main():
     global DST_IP_ALLOCATE
     global TCP_PORT_ALLOCATE
     global TRAFFIC_STATS
+    global MINING_THRESHOLD
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--interface', nargs='?',
                         required=True, help='capture interface')
     parser.add_argument('-c', '--cnet', nargs='+',
                         required=True, help='client network(s)')
-    parser.add_argument('-w', '--sampwindow', nargs='?',
-                        help='sampling interval (default: 0.5 s)')
+    parser.add_argument('-m', '--miningthreshold', nargs='?',
+                        help='mining detection threshold (default: 0.50)')
     args = parser.parse_args()
 
     client_networks = None
@@ -226,7 +235,8 @@ def main():
     print('TCP filter active on {} applied to the following '
             'networks: {}'.format(net_interface, CLIENT_NETS_SET))
 
-    SAMPLE_DELTA = args.sampwindow if args.sampwindow is not None else SAMPLE_DELTA
+    MINING_THRESHOLD = args.miningthreshold if args.miningthreshold is not None \
+        else MINING_THRESHOLD
 
     TRAFFIC_STATS = \
         np.zeros((SRC_IP_ALLOCATE, DST_IP_ALLOCATE, TCP_PORT_ALLOCATE,
