@@ -34,7 +34,7 @@ def add_new_src_ip():
     global N_FEATURES
     global TRAFFIC_STATS
 
-    if len(LOCAL_IPS) <= TRAFFIC_STATS.shape[0]:
+    if len(LOCAL_IPS) < TRAFFIC_STATS.shape[0]:
         return
 
     # Pre allocate memory space
@@ -53,7 +53,7 @@ def add_new_dst_ip():
     global N_FEATURES
     global TRAFFIC_STATS
 
-    if len(REMOTE_IPS) <= TRAFFIC_STATS.shape[1]:
+    if len(REMOTE_IPS) < TRAFFIC_STATS.shape[1]:
         return
 
     # Pre allocate memory space
@@ -74,7 +74,7 @@ def add_new_tcp_port():
     global N_FEATURES
     global TRAFFIC_STATS
 
-    if len(TCP_PORTS) <= TRAFFIC_STATS.shape[1]:
+    if len(TCP_PORTS) < TRAFFIC_STATS.shape[2]:
         return
 
     # Pre allocate memory space
@@ -123,7 +123,7 @@ def classify(local_ip, remote_ip, remote_port):
         # Block in the firewall
         print("TCP flow with src IP {} and dst IP {} is running mining "
               "on port {} with {}% accuracy".format(
-            local_ip, remote_ip, remote_port, class_percent*100))
+            local_ip, remote_ip, remote_port, classes['min']*100))
 
         return -1
 
