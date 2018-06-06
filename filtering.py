@@ -11,7 +11,7 @@ N_PACKETS = 0
 OUTFILE_PATH = 'samples/'
 SAMPLE_DELTA = 0.5
 WINDOW_SIZE = 240
-N_WINDOWS = 5
+N_WINDOWS = 2 
 WINDOW_DELTA = WINDOW_SIZE * N_WINDOWS
 SRC_IP_ALLOCATE = 20
 DST_IP_ALLOCATE = 100
@@ -23,7 +23,7 @@ LOCAL_IPS = {}
 REMOTE_IPS = {}
 TCP_PORTS = {}
 BASE_TIMESTAMP = None
-MINING_THRESHOLD = 0.5
+MINING_THRESHOLD = 0.7
 
 
 def add_new_src_ip():
@@ -34,7 +34,7 @@ def add_new_src_ip():
     global N_FEATURES
     global TRAFFIC_STATS
 
-    if len(LOCAL_IPS) <= TRAFFIC_STATS.shape[0]:
+    if len(LOCAL_IPS) < TRAFFIC_STATS.shape[0]:
         return
 
     # Pre allocate memory space
@@ -53,7 +53,7 @@ def add_new_dst_ip():
     global N_FEATURES
     global TRAFFIC_STATS
 
-    if len(REMOTE_IPS) <= TRAFFIC_STATS.shape[1]:
+    if len(REMOTE_IPS) < TRAFFIC_STATS.shape[1]:
         return
 
     # Pre allocate memory space
@@ -74,7 +74,7 @@ def add_new_tcp_port():
     global N_FEATURES
     global TRAFFIC_STATS
 
-    if len(TCP_PORTS) <= TRAFFIC_STATS.shape[1]:
+    if len(TCP_PORTS) < TRAFFIC_STATS.shape[2]:
         return
 
     # Pre allocate memory space
@@ -107,15 +107,20 @@ def classify(local_ip, remote_ip, remote_port):
 
     # Traffic profiling
     dataset = TRAFFIC_STATS[src_idx][dst_idx][port_idx][:, 1:]
+    print("DATASET: ", dataset)
     f, fs, fw = extract_live_features(dataset)
+    print("ANALYTICS FEATURES: ", f)
     all_features = np.hstack((f, fs, fw))
+    print("ALL FEATURES SHAPE", all_features.shape)
 
-    if all_features.shape[0] == 0:
+    # Less than 3 valid windows, cannot extract features with PCA 
+    if all_features.shape[0] < 3:
         print("No features could be extracted from TCP flow with src IP {} and "
               "dst IP {} on port {}.".format(local_ip, remote_ip, remote_port))
         return -1
 
     norm_pca_features = normalize_live_features(all_features)
+    print("PCA FEATURES SHAPE", norm_pca_features.shape)
 
     # Traffic classification
     classes = classify_live_data(norm_pca_features)
@@ -123,7 +128,7 @@ def classify(local_ip, remote_ip, remote_port):
         # Block in the firewall
         print("TCP flow with src IP {} and dst IP {} is running mining "
               "on port {} with {}% accuracy".format(
-            local_ip, remote_ip, remote_port, class_percent*100))
+            local_ip, remote_ip, remote_port, classes['min']*100))
 
         return -1
 
@@ -140,10 +145,21 @@ def pkt_callback(pkt):
     global TCP_PORTS
     global BASE_TIMESTAMP
 
-    src_ip = IPAddress(pkt.ip.src)
-    dst_ip = IPAddress(pkt.ip.dst)
-    src_port = pkt.tcp.srcport
-    dst_port = pkt.tcp.dstport
+    if 'ipv6' in [l.layer_name for l in pkt.layers]:
+        src_ip = IPAddress(pkt.ipv6.src)
+        dst_ip = IPAddress(pkt.ipv6.dst)
+        src_port = pkt.tcp.srcport
+        dst_port = pkt.tcp.dstport
+        size = int(pkt.ipv6.plen)
+    else:
+        src_ip = IPAddress(pkt.ip.src)
+        dst_ip = IPAddress(pkt.ip.dst)
+        src_port = pkt.tcp.srcport
+        dst_port = pkt.tcp.dstport
+        size = int(pkt.ip.get_field('Len'))
+
+    if src_ip == IPAddress('94.63.100.39') or dst_ip == IPAddress('94.63.100.39'):
+        return
 
     # Verify if it's a valid IP prefix
     if src_ip in CLIENT_NETS_SET:
@@ -195,7 +211,7 @@ def pkt_callback(pkt):
         idx = 0
         info[idx][0] = timestamp
 
-    info[idx][1+up_down] += int(pkt.ip.get_field('Len'))
+    info[idx][1+up_down] += size
     info[idx][3+up_down] += 1
 
     TRAFFIC_STATS[src_idx][dst_idx][port_idx] = info

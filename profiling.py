@@ -187,11 +187,15 @@ def traffic_profiling(dataset_path, traffic_class, plot=True,
 
 def normalize_live_features(test_features):
     scaler = StandardScaler()
+    print("TESTING SHAPE: ", test_features.shape)
+    print("TEST FEATURES: ", test_features)
     normalized_test_features = scaler.fit_transform(test_features)
+    print("NORM TESTING SHAPE: ", normalized_test_features.shape)
 
     pca = joblib.load('classification-model/pca_model.sav')
     normalized_pca_test_features = pca.fit(normalized_test_features). \
         transform(normalized_test_features)
+    print("NORM PCA TESTING SHAPE: ", normalized_test_features.shape)
 
     return normalized_pca_test_features
 
