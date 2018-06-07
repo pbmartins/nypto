@@ -186,30 +186,27 @@ def traffic_profiling(dataset_path, traffic_class, plot=True,
 
 
 def normalize_live_features(test_features):
-    scaler = StandardScaler()
-    print("TESTING SHAPE: ", test_features.shape)
-    print("TEST FEATURES: ", test_features)
-    normalized_test_features = scaler.fit_transform(test_features)
-    print("NORM TESTING SHAPE: ", normalized_test_features.shape)
+    scaler = joblib.load('classification-model/scaler.sav')
+    normalized_test_features = scaler.transform(test_features)
 
     pca = joblib.load('classification-model/pca_model.sav')
-    normalized_pca_test_features = pca.fit(normalized_test_features). \
-        transform(normalized_test_features)
-    print("NORM PCA TESTING SHAPE: ", normalized_test_features.shape)
+    normalized_pca_test_features = pca.transform(normalized_test_features)
 
     return normalized_pca_test_features
 
 
 def normalize_train_features(features, test_features):
     scaler = StandardScaler()
-    normalized_features = scaler.fit_transform(features)
-    normalized_test_features = scaler.fit_transform(test_features)
+    scaler.fit(features)
+    normalized_features = scaler.transform(features)
+    normalized_test_features = scaler.transform(test_features)
+
+    joblib.dump(scaler, 'classification-model/scaler.sav')
 
     pca = PCA(n_components=3, svd_solver='full')
-    normalized_pca_features = pca.fit(normalized_features). \
-        transform(normalized_features)
-    normalized_pca_test_features = pca.fit(normalized_test_features). \
-        transform(normalized_test_features)
+    pca.fit(normalized_features)
+    normalized_pca_features = pca.transform(normalized_features)
+    normalized_pca_test_features = pca.transform(normalized_test_features)
 
     joblib.dump(pca, 'classification-model/pca_model.sav')
 
