@@ -147,6 +147,7 @@ def accuracy_score(y_pred, y_true):
 def classify_live_data(norm_pca_features):
     model = joblib.load('classification-model/classification_model.sav')
     result = model.predict(norm_pca_features)
+    print(result)
 
     not_mining = len([r for r in result if r < 13])
     classes = {
