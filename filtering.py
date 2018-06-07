@@ -79,7 +79,7 @@ def classify(local_ip, remote_port):
     print("ALL FEATURES SHAPE", all_features.shape)
 
     # Less than 3 valid windows, cannot extract features with PCA
-    if all_features.shape[0] < 2:
+    if all_features.shape[0] < 3:
         print("No features could be extracted from TCP flow with src IP {} "
               "on port {}.".format(local_ip, remote_port))
         return -1
@@ -97,8 +97,10 @@ def classify(local_ip, remote_port):
 
         return -1
 
-    print("NOT MINING")
-
+    print("TCP flow with src IP {} is NOT mining "
+          "on port {} with {}% accuracy".format(
+        local_ip, remote_port, classes['min']*100))
+    
     return 0
 
 
