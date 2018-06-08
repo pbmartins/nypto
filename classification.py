@@ -2,6 +2,7 @@ from sklearn import svm
 from sklearn.cluster import DBSCAN
 from sklearn.cluster import KMeans
 from sklearn.externals import joblib
+from sklearn.metrics import confusion_matrix
 from sklearn.neural_network import MLPClassifier
 from scipy.stats import multivariate_normal
 from itertools import groupby
@@ -118,6 +119,7 @@ def classification_neural_networks(obs_classes, norm_pca_features,
                                    max_iter=100000, hidden_layer_size=1000):
 
     traffic_idx = {}
+    """
     clf = MLPClassifier(
         solver='sgd',
         alpha=alpha,
@@ -128,7 +130,8 @@ def classification_neural_networks(obs_classes, norm_pca_features,
 
     # Save model
     joblib.dump(clf, 'classification-model/classfication_model.sav')
-    
+    """
+    clf = joblib.load('classification-model/classification_model.sav')
     result = clf.predict(norm_pca_test_features)
 
     for i in range(norm_pca_test_features.shape[0]):
@@ -138,8 +141,8 @@ def classification_neural_networks(obs_classes, norm_pca_features,
 
 
 def accuracy_score(y_pred, y_true):
-    hits = sum(y_true[i] == y_pred[i] or (y_true[i] <= 12 and y_pred[i] <= 12)
-            or (y_true[i] >= 13 and y_pred[i] >= 13) 
+    hits = sum(y_true[i] == y_pred[i] or (y_true[i] <= 6 and y_pred[i] <= 6)
+            or (y_true[i] >= 7 and y_pred[i] >= 7)
             for i in range(len(y_true)))[0]
     return hits / len(y_true)
 
@@ -155,6 +158,30 @@ def classify_live_data(norm_pca_features):
         'min': (len(result) - not_mining) / len(result)
     }
     return classes
+
+
+def print_cm(cm, labels, hide_zeroes=False, hide_diagonal=False, hide_threshold=None):
+    """pretty print for confusion matrixes"""
+    columnwidth = max([len(x) for x in labels] + [5])  # 5 is value length
+    empty_cell = " " * columnwidth
+    # Print header
+    print("    " + empty_cell, end=" ")
+    for label in labels:
+        print("%{0}s".format(columnwidth) % label, end=" ")
+    print()
+    # Print rows
+    for i, label1 in enumerate(labels):
+        print("    %{0}s".format(columnwidth) % label1, end=" ")
+        for j in range(len(labels)):
+            cell = "%{0}.1f".format(columnwidth) % cm[i, j]
+            if hide_zeroes:
+                cell = cell if float(cm[i, j]) != 0 else empty_cell
+            if hide_diagonal:
+                cell = cell if i != j else empty_cell
+            if hide_threshold:
+                cell = cell if cm[i, j] > hide_threshold else empty_cell
+            print(cell, end=" ")
+        print()
 
 
 def main():
@@ -214,7 +241,8 @@ def main():
 
     y_test = classification_neural_networks(obs_classes, norm_pca_train_features,
                                             norm_pca_test_features)
-
+    cm = confusion_matrix(obs_classes, list(y_test.values()))
+    print_cm(cm, [str(i) for i in list(range(0, 14))])
     print('NN acc = ', accuracy_score(list(y_test.values()), obs_classes))
 
 
