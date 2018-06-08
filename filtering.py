@@ -73,9 +73,9 @@ def classify(local_ip, remote_port):
     # Traffic profiling
     dataset = TRAFFIC_STATS[src_idx][port_idx][:, 1:]
     print("DATASET: ", dataset)
-    f, fs, fw = extract_live_features(dataset)
+    f, fs = extract_live_features(dataset)
     print("ANALYTICS FEATURES: ", f)
-    all_features = np.hstack((f, fs, fw))
+    all_features = np.hstack((f, fs))
     print("ALL FEATURES SHAPE", all_features.shape)
 
     # Less than 3 valid windows, cannot extract features with PCA
@@ -99,7 +99,7 @@ def classify(local_ip, remote_port):
 
     print("TCP flow with src IP {} is NOT mining "
           "on port {} with {}% accuracy".format(
-        local_ip, remote_port, classes['min']*100))
+        local_ip, remote_port, classes['nmin']*100))
     
     return 0
 
