@@ -170,7 +170,7 @@ def traffic_profiling(dataset_path, traffic_class, plot=True,
     if plot:
         plot_traffic_class(dataset, traffic_class)
 
-    scales = [2, 4, 8]
+    scales = [2, 4]
     data_train, data_test = break_train_test(
         dataset, train_percentage=train_percentage, random_split=True)
     empty_windows_train, features = extract_features(data_train)
@@ -259,13 +259,13 @@ def extract_traffic_features(traffic_classes, datasets_filepath):
     """
 
     # Training features
-    all_features = np.hstack((features, features_silence))#, features_wavelet))
+    all_features = np.hstack((features, features_silence, features_wavelet))
 
     # Testing features (size must be the same than the training)
     all_test_features = np.hstack((
         test_features[:features.shape[0]],
-        test_features_silence[:features_silence.shape[0]]
-        #test_features_wavelet[:features_wavelet.shape[0]]
+        test_features_silence[:features_silence.shape[0]],
+        test_features_wavelet[:features_wavelet.shape[0]]
     ))
 
     # Normalize train and test features
