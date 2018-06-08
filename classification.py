@@ -149,7 +149,7 @@ def classify_live_data(norm_pca_features):
     result = model.predict(norm_pca_features)
     print(result)
 
-    not_mining = len([r for r in result if r < 13])
+    not_mining = len([r for r in result if r < 7])
     classes = {
         'nmin': not_mining / len(result),
         'min': (len(result) - not_mining) / len(result)
