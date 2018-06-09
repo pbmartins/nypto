@@ -152,13 +152,14 @@ def extract_features_wavelet(data, empty_windows, scales=[2, 4, 8, 16, 32]):
 
 
 def extract_live_features(data_test):
-    scales = [2, 4, 8]
+    scales = [2, 4]
     data_train, data_test = break_train_test(
         data_test, train_percentage=0.0, random_split=True)
     empty_windows_test, test_features = extract_features(data_test)
     test_features_silence = extract_features_silence(data_test, empty_windows_test)
+    test_features_wavelet = extract_features_wavelet(data_test, empty_windows_test, scales)
 
-    return test_features, test_features_silence
+    return test_features, test_features_silence, test_features_wavelet
 
 
 def traffic_profiling(dataset_path, traffic_class, plot=True,
