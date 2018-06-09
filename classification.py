@@ -140,11 +140,16 @@ def classification_neural_networks(obs_classes, norm_pca_features,
     return traffic_idx
 
 
-def accuracy_score(y_pred, y_true):
-    hits = sum(y_true[i] == y_pred[i] or (y_true[i] <= 6 and y_pred[i] <= 6)
-            or (y_true[i] >= 7 and y_pred[i] >= 7)
-            for i in range(len(y_true)))[0]
-    return hits / len(y_true)
+def binary_scores(conf_matrix, change_class, max_class):
+    tp = conf_matrix[0:change_class, 0:change_class].sum()
+    fn = conf_matrix[change_class:max_class+1, 0:change_class].sum()
+    fp = conf_matrix[0:change_class, change_class:max_class+1,].sum()
+    tn = conf_matrix[change_class:max_class+1, change_class:max_class+1].sum()
+    precision = tp / (tp + fp)
+    recall = tp / (tp + fn)
+    accuracy = (tp + tn) / (tp + fp + fn + tn)
+
+    return tp, fn, fp, tn, precision, recall, accuracy
 
 
 def classify_live_data(norm_pca_features):
@@ -228,22 +233,34 @@ def main():
 
     # Classify using just some algorithms
 
-    y_test = classification_gaussian_distribution(traffic_classes, obs_classes,
-                                                  norm_pca_train_features,
-                                                  norm_pca_test_features)
+    #y_test = classification_gaussian_distribution(traffic_classes, obs_classes,
+    #                                              norm_pca_train_features,
+    #                                              norm_pca_test_features)
 
-    print('GAUSSIAN acc = ', accuracy_score(list(y_test.values()), obs_classes))
+    #print('GAUSSIAN acc = ', accuracy_score(list(y_test.values()), obs_classes))
 
-    y_test = classification_svm(obs_classes, norm_pca_train_features,
-                                             norm_pca_test_features, mode=0)
+    #y_test = classification_svm(obs_classes, norm_pca_train_features,
+    #                                         norm_pca_test_features, mode=0)
 
-    print('SVM acc = ', accuracy_score(list(y_test.values()), obs_classes))
+    #print('SVM acc = ', accuracy_score(list(y_test.values()), obs_classes))
 
     y_test = classification_neural_networks(obs_classes, norm_pca_train_features,
                                             norm_pca_test_features)
+
+    # Print confusion matrix
     cm = confusion_matrix(obs_classes, list(y_test.values()))
     print_cm(cm, [str(i) for i in list(range(0, 14))])
-    print('NN acc = ', accuracy_score(list(y_test.values()), obs_classes))
+
+    # Compute performance scores
+    tp, fn, fp, tn, precision, recall, accuracy = binary_scores(cm, 7, 13)
+
+    print('True positives = ', tp)
+    print('False negatives = ', fn)
+    print('False positives = ', fp)
+    print('True negatives = ', tn)
+    print('Precision = ', precision)
+    print('Recall = ', recall)
+    print('Accuracy = ', accuracy)
 
 
 if __name__ == '__main__':
