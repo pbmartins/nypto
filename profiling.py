@@ -154,7 +154,7 @@ def extract_features_wavelet(data, empty_windows, scales=[2, 4, 8, 16, 32]):
 def extract_live_features(data_test):
     scales = [2, 4]
     data_train, data_test = break_train_test(
-        data_test, train_percentage=0.0, random_split=True)
+        data_test, train_percentage=0.0, random_split=False)
     empty_windows_test, test_features = extract_features(data_test)
     test_features_silence = extract_features_silence(data_test, empty_windows_test)
     test_features_wavelet = extract_features_wavelet(data_test, empty_windows_test, scales)
@@ -171,15 +171,15 @@ def traffic_profiling(dataset_path, traffic_class, plot=True,
 
     scales = [2, 4]
     data_train, data_test = break_train_test(
-        dataset, train_percentage=train_percentage, random_split=True)
+        dataset, train_percentage=train_percentage, random_split=False)
     empty_windows_train, features = extract_features(data_train)
     empty_windows_test, test_features = extract_features(data_test)
     features_silence = extract_features_silence(data_train, empty_windows_train)
     test_features_silence = extract_features_silence(data_test, empty_windows_test)
     features_wavelet = extract_features_wavelet(data_train, empty_windows_train, scales)
     test_features_wavelet = extract_features_wavelet(data_test, empty_windows_test, scales)
-    n_obs_windows = data_train.shape[0] - len(empty_windows_train)
-
+    n_obs_windows = data_test.shape[0] - len(empty_windows_test)
+    
     return features, features_silence, features_wavelet, test_features, \
            test_features_silence, test_features_wavelet, n_obs_windows
 
@@ -256,15 +256,21 @@ def extract_traffic_features(traffic_classes, datasets_filepath):
     plt.figure(5)
     plot_features(features_silence, traffic_classes, 0, 2)
     """
-
+    
+    feature_size = min(features.shape[0], test_features.shape[0])
+    
     # Training features
-    all_features = np.hstack((features, features_silence, features_wavelet))
-
+    all_features = np.hstack((
+        features[:feature_size],
+        features_silence[:feature_size],
+        features_wavelet[:feature_size]
+    ))
+    
     # Testing features (size must be the same than the training)
     all_test_features = np.hstack((
-        test_features[:features.shape[0]],
-        test_features_silence[:features_silence.shape[0]],
-        test_features_wavelet[:features_wavelet.shape[0]]
+        test_features[:feature_size],
+        test_features_silence[:feature_size],
+        test_features_wavelet[:feature_size]
     ))
 
     # Normalize train and test features

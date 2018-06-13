@@ -119,7 +119,6 @@ def classification_neural_networks(obs_classes, norm_pca_features,
                                    max_iter=100000, hidden_layer_size=1000):
 
     traffic_idx = {}
-    """
     clf = MLPClassifier(
         solver='sgd',
         alpha=alpha,
@@ -129,9 +128,10 @@ def classification_neural_networks(obs_classes, norm_pca_features,
     clf.fit(norm_pca_features, obs_classes)
 
     # Save model
-    joblib.dump(clf, 'classification-model/classfication_model.sav')
+    joblib.dump(clf, 'classification-model/classification_model.sav')
     """
     clf = joblib.load('classification-model/classification_model.sav')
+    """
     result = clf.predict(norm_pca_test_features)
 
     for i in range(norm_pca_test_features.shape[0]):
@@ -191,7 +191,6 @@ def print_cm(cm, labels, hide_zeroes=False, hide_diagonal=False, hide_threshold=
 
 def main():
 
-    """
     # Generate new profiled data
 
     unnorm_train_features, unnorm_test_features, \
@@ -224,6 +223,7 @@ def main():
     norm_pca_test_features = d['norm_test']
     traffic_classes = d['classes']
     traffic_samples_number = d['samples_number']
+    """
 
     obs_classes = profiling.get_obs_classes(traffic_samples_number, 1,
                                             traffic_classes)
