@@ -192,9 +192,8 @@ def print_cm(cm, labels, hide_zeroes=False, hide_diagonal=False, hide_threshold=
 
 
 def main():
-    """
+    """ 
     # Generate new profiled data
-
     unnorm_train_features, unnorm_test_features, \
     norm_pca_train_features, norm_pca_test_features, \
     traffic_classes, traffic_samples_number = profiling.profiling()
@@ -211,8 +210,8 @@ def main():
 
     with open('profiled-data/input_data.pkl', 'wb') as output:
         pickle.dump(d, output, pickle.HIGHEST_PROTOCOL)
-    """
     
+    """
     # Load saved profiled data
     
     with open('profiled-data/input_data.pkl', 'rb') as input:
@@ -237,10 +236,10 @@ def main():
                                              norm_pca_test_features, mode=0)
 
     cm = confusion_matrix(obs_classes, list(y_test.values()))
-    print_cm(cm, [str(i) for i in list(range(0, 14))])
+    #print_cm(cm, [str(i) for i in list(range(0, 14))])
 
     # Compute performance scores
-    tp, fn, fp, tn, precision, recall, accuracy = binary_scores(cm, 7, 13)
+    tp, fn, fp, tn, precision, recall, accuracy = binary_scores(cm, 13, 39)
 
     print('True positives = ', tp)
     print('False negatives = ', fn)
@@ -249,7 +248,7 @@ def main():
     print('Precision = ', precision)
     print('Recall = ', recall)
     print('Accuracy = ', accuracy)
-
+    
     """
     # Classify using NN
 
@@ -261,7 +260,7 @@ def main():
     print_cm(cm, [str(i) for i in list(range(0, 14))])
 
     # Compute performance scores
-    tp, fn, fp, tn, precision, recall, accuracy = binary_scores(cm, 7, 13)
+    tp, fn, fp, tn, precision, recall, accuracy = binary_scores(cm, 13, 39)
 
     print('True positives = ', tp)
     print('False negatives = ', fn)
