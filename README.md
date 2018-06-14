@@ -1,6 +1,6 @@
-# "Offline" model (master branch)
+## "Offline" model (master branch)
 
-## Default model with 39 classes (window aggregation: 1) - SVM SVC
+### Default model with 39 classes (window aggregation: 1) - SVM SVC
 
 True positives =  1201
 False negatives =  1455
@@ -20,9 +20,9 @@ Precision =  0.6661417322834645
 Recall =  0.4663726571113561
 Accuracy =  0.8591948209589318
 
-# Live filtering model with window aggregation (live-filtering branch) 
+## Live filtering model with window aggregation (live-filtering branch) 
 
-## Binary classification (2 aggregated classes) - SVM Linear SVC
+### Binary classification (2 aggregated classes) - SVM Linear SVC
 
 Confusion Matrix:
 
@@ -40,7 +40,7 @@ Precision =  0.7062314540059347
 Recall =  0.8793103448275862
 Accuracy =  0.9634698973457875
 
-## All classes with binary results (window aggregation: 20, threshold: 0.6) - SVM SVC
+### All classes with binary results (window aggregation: 20, threshold: 0.6) - SVM SVC
 
 Confusion Matrix:
 
