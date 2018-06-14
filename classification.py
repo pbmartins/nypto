@@ -106,8 +106,12 @@ def classification_svm(obs_classes, norm_features,
     }
 
     modes[mode]['func'].fit(norm_features, obs_classes)
-    result = modes[mode]['func'].predict(norm_test_features)
 
+    # Save model
+    joblib.dump(modes[mode]['func'], 'classification-model/classification_model.sav')
+    
+    result = modes[mode]['func'].predict(norm_test_features)
+    
     for i in range(norm_test_features.shape[0]):
         traffic_idx[i] = result[i]
 
@@ -129,9 +133,7 @@ def classification_neural_networks(obs_classes, norm_pca_features,
 
     # Save model
     joblib.dump(clf, 'classification-model/classification_model.sav')
-    """
-    clf = joblib.load('classification-model/classification_model.sav')
-    """
+    
     result = clf.predict(norm_pca_test_features)
 
     for i in range(norm_pca_test_features.shape[0]):
@@ -190,7 +192,7 @@ def print_cm(cm, labels, hide_zeroes=False, hide_diagonal=False, hide_threshold=
 
 
 def main():
-
+    """
     # Generate new profiled data
 
     unnorm_train_features, unnorm_test_features, \
@@ -209,7 +211,6 @@ def main():
 
     with open('profiled-data/input_data.pkl', 'wb') as output:
         pickle.dump(d, output, pickle.HIGHEST_PROTOCOL)
-
     """
     
     # Load saved profiled data
@@ -223,7 +224,6 @@ def main():
     norm_pca_test_features = d['norm_test']
     traffic_classes = d['classes']
     traffic_samples_number = d['samples_number']
-    """
 
     obs_classes = profiling.get_obs_classes(traffic_samples_number, 1,
                                             traffic_classes)
@@ -231,18 +231,27 @@ def main():
     # Plot unnormalized features
     #profiling.plot_features(unnorm_train_features, obs_classes)
 
-    # Classify using just some algorithms
+    # Classify using SVM
 
-    #y_test = classification_gaussian_distribution(traffic_classes, obs_classes,
-    #                                              norm_pca_train_features,
-    #                                              norm_pca_test_features)
+    y_test = classification_svm(obs_classes, norm_pca_train_features,
+                                             norm_pca_test_features, mode=0)
 
-    #print('GAUSSIAN acc = ', accuracy_score(list(y_test.values()), obs_classes))
+    cm = confusion_matrix(obs_classes, list(y_test.values()))
+    print_cm(cm, [str(i) for i in list(range(0, 14))])
 
-    #y_test = classification_svm(obs_classes, norm_pca_train_features,
-    #                                         norm_pca_test_features, mode=0)
+    # Compute performance scores
+    tp, fn, fp, tn, precision, recall, accuracy = binary_scores(cm, 7, 13)
 
-    #print('SVM acc = ', accuracy_score(list(y_test.values()), obs_classes))
+    print('True positives = ', tp)
+    print('False negatives = ', fn)
+    print('False positives = ', fp)
+    print('True negatives = ', tn)
+    print('Precision = ', precision)
+    print('Recall = ', recall)
+    print('Accuracy = ', accuracy)
+
+    """
+    # Classify using NN
 
     y_test = classification_neural_networks(obs_classes, norm_pca_train_features,
                                             norm_pca_test_features)
@@ -261,7 +270,7 @@ def main():
     print('Precision = ', precision)
     print('Recall = ', recall)
     print('Accuracy = ', accuracy)
-
+    """
 
 if __name__ == '__main__':
     main()

@@ -96,8 +96,8 @@ def extract_features(data):
                 mean,
                 np.median(data[i, :, :], axis=0),
                 np.std(data[i, :, :], axis=0),
-                stats.skew(data[i, :, :]),
-                stats.kurtosis(data[i, :, :]),
+                #stats.skew(data[i, :, :]),
+                #stats.kurtosis(data[i, :, :]),
                 np.array(np.percentile(data[i, :, :], percentils, axis=0)).T.flatten(),
             )))
     return empty_windows, np.array(features)
@@ -202,7 +202,7 @@ def normalize_train_features(features, test_features):
 
     joblib.dump(scaler, 'classification-model/scaler.sav')
 
-    pca = PCA(n_components=3, svd_solver='full')
+    pca = PCA(n_components=25, svd_solver='full')
     pca.fit(normalized_features)
     normalized_pca_features = pca.transform(normalized_features)
     normalized_pca_test_features = pca.transform(normalized_test_features)
