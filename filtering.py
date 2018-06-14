@@ -11,7 +11,7 @@ N_PACKETS = 0
 OUTFILE_PATH = 'samples/'
 SAMPLE_DELTA = 0.5
 WINDOW_SIZE = 240
-N_WINDOWS = 5
+N_WINDOWS = 2
 WINDOW_DELTA = WINDOW_SIZE * N_WINDOWS
 SRC_IP_ALLOCATE = 40
 TCP_PORT_ALLOCATE = 100
@@ -76,8 +76,10 @@ def classify(local_ip, remote_port):
     f, fs, fw = extract_live_features(dataset)
     #print("ANALYTICS FEATURES: ", f)
     all_features = np.hstack((f, fs, fw))
+    all_features = np.nan_to_num(all_features)
     #print("ALL FEATURES SHAPE", all_features.shape)
-
+    #print("ALL FEATURES", all_features)
+    
     # Less than 3 valid windows, cannot extract features with PCA
     if all_features.shape[0] < 3:
         print("No features could be extracted from TCP flow with src IP {} "
