@@ -5,7 +5,7 @@ from sklearn.externals import joblib
 from sklearn.metrics import confusion_matrix
 from sklearn.neural_network import MLPClassifier
 from scipy.stats import multivariate_normal
-from itertools import groupby
+from collections import Counter
 import numpy as np
 import pickle
 import profiling
@@ -142,6 +142,37 @@ def classification_neural_networks(obs_classes, norm_pca_features,
     return traffic_idx
 
 
+def classify_aggregation_window(window, threshold=0.55):
+    num_class = {k: v for k,v in Counter(window).items()}
+    max_repetition = max(num_class, key=num_class.get)
+
+    if num_class[max_repetition] / len(window) > threshold:
+        return [max_repetition for i in range(len(window))]
+
+    return window
+
+
+def improve_classification_history(traffic_samples, traffic_idx, window_size=20, 
+                                   threshold=0.60):
+    traffic_idx = list(traffic_idx.values())
+
+    # Use historic view to classify windows
+    for ts in traffic_samples:
+        i = 0
+        while i + window_size < ts:
+            c = classify_aggregation_window(traffic_idx[i:i+window_size], 
+                                            threshold)
+            traffic_idx[i:i+window_size] = c
+            i += window_size
+
+        if ts - i > 0:
+            c = classify_aggregation_window(traffic_idx[i:ts], threshold)
+            traffic_idx[i:ts] = c
+    
+
+    return traffic_idx
+
+
 def binary_scores(conf_matrix, change_class, max_class):
     tp = conf_matrix[0:change_class, 0:change_class].sum()
     fn = conf_matrix[change_class:max_class+1, 0:change_class].sum()
@@ -192,9 +223,8 @@ def print_cm(cm, labels, hide_zeroes=False, hide_diagonal=False, hide_threshold=
 
 
 def main():
-    """
+    """ 
     # Generate new profiled data
-
     unnorm_train_features, unnorm_test_features, \
     norm_pca_train_features, norm_pca_test_features, \
     traffic_classes, traffic_samples_number = profiling.profiling()
@@ -211,8 +241,8 @@ def main():
 
     with open('profiled-data/input_data.pkl', 'wb') as output:
         pickle.dump(d, output, pickle.HIGHEST_PROTOCOL)
-    """
     
+    """
     # Load saved profiled data
     
     with open('profiled-data/input_data.pkl', 'rb') as input:
@@ -235,8 +265,9 @@ def main():
 
     y_test = classification_svm(obs_classes, norm_pca_train_features,
                                              norm_pca_test_features, mode=0)
+    y_test = improve_classification_history(traffic_samples_number, y_test)
 
-    cm = confusion_matrix(obs_classes, list(y_test.values()))
+    cm = confusion_matrix(obs_classes, y_test)
     print_cm(cm, [str(i) for i in list(range(0, 14))])
 
     # Compute performance scores
@@ -249,19 +280,20 @@ def main():
     print('Precision = ', precision)
     print('Recall = ', recall)
     print('Accuracy = ', accuracy)
-
+    
     """
     # Classify using NN
 
     y_test = classification_neural_networks(obs_classes, norm_pca_train_features,
                                             norm_pca_test_features)
+    y_test = improve_classification_history(traffic_samples_number, y_test)
 
     # Print confusion matrix
-    cm = confusion_matrix(obs_classes, list(y_test.values()))
+    cm = confusion_matrix(obs_classes, y_test)
     print_cm(cm, [str(i) for i in list(range(0, 14))])
 
     # Compute performance scores
-    tp, fn, fp, tn, precision, recall, accuracy = binary_scores(cm, 7, 13)
+    tp, fn, fp, tn, precision, recall, accuracy = binary_scores(cm, 13, 39)
 
     print('True positives = ', tp)
     print('False negatives = ', fn)
