@@ -1,8 +1,5 @@
 ## "Offline" model (master branch)
 
-Window size = 2 minutes  
-Sliding time = 20 seconds
-
 ### Default model with 39 classes (window size: 2 min, window slide: 20s, window aggregation: 1) - SVM SVC
 
 True positives =  1201  
@@ -37,9 +34,6 @@ Accuracy =  0.8988361683079678
 
 ### Binary classification with 2 aggregated classes (window aggregation: 50, threshold: 0.55) - SVM Linear SVC
 
-Window size = 2 minutes  
-Sliding time = 20 seconds
-
 Confusion Matrix:
 
 ```
@@ -57,9 +51,6 @@ Recall =  0.8793103448275862
 Accuracy =  0.9634698973457875  
 
 ### All classes with binary results (window size: 6 min, window slide: 20s, window aggregation: 70, threshold: 0.55) - SVM SVC
-
-Window size = 6 minutes  
-Sliding time = 20 seconds  
 
 Confusion Matrix:
 
