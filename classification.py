@@ -152,8 +152,8 @@ def classify_aggregation_window(window, threshold=0.55):
     return window
 
 
-def improve_classification_history(traffic_samples, traffic_idx, window_size=20, 
-                                   threshold=0.60):
+def improve_classification_history(traffic_samples, traffic_idx, window_size=70, 
+                                   threshold=0.55):
     traffic_idx = list(traffic_idx.values())
 
     # Use historic view to classify windows
@@ -223,7 +223,7 @@ def print_cm(cm, labels, hide_zeroes=False, hide_diagonal=False, hide_threshold=
 
 
 def main():
-    """ 
+    """
     # Generate new profiled data
     unnorm_train_features, unnorm_test_features, \
     norm_pca_train_features, norm_pca_test_features, \
@@ -254,10 +254,11 @@ def main():
     norm_pca_test_features = d['norm_test']
     traffic_classes = d['classes']
     traffic_samples_number = d['samples_number']
-
+    
+    
     obs_classes = profiling.get_obs_classes(traffic_samples_number, 1,
                                             traffic_classes)
-    
+   
     # Plot unnormalized features
     #profiling.plot_features(unnorm_train_features, obs_classes)
 
