@@ -56,7 +56,7 @@ def plot_features(features, obs_classes, feature1_idx=0, feature2_idx=1):
     plt.show()
 
 
-def break_train_test(data, obs_window=240, slide_window=40,
+def break_train_test(data, obs_window=840, slide_window=40,
                      train_percentage=0.5, random_split=True):
     if len(data) <= obs_window:
         return np.array([data]), np.array([data])
@@ -178,7 +178,7 @@ def traffic_profiling(dataset_path, traffic_class, plot=True,
     test_features_silence = extract_features_silence(data_test, empty_windows_test)
     features_wavelet = extract_features_wavelet(data_train, empty_windows_train, scales)
     test_features_wavelet = extract_features_wavelet(data_test, empty_windows_test, scales)
-    n_obs_windows = data_test.shape[0] - len(empty_windows_test)
+    n_obs_windows = data_train.shape[0] - len(empty_windows_test)
     
     return features, features_silence, features_wavelet, test_features, \
            test_features_silence, test_features_wavelet, n_obs_windows
