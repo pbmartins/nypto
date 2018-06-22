@@ -98,6 +98,7 @@ def classification_clustering(traffic_classes, obs_classes, norm_pca_features,
 def classification_svm(obs_classes, norm_features,
                        norm_test_features, mode=0):
     traffic_idx = {}
+
     modes = {
         0: {'name': 'SVC', 'func': svm.SVC(kernel='linear')},
         1: {'name': 'Kernel RBF', 'func': svm.SVC(kernel='rbf')},
@@ -109,7 +110,7 @@ def classification_svm(obs_classes, norm_features,
 
     # Save model
     joblib.dump(modes[mode]['func'], 'classification-model/classification_model.sav')
-    
+
     result = modes[mode]['func'].predict(norm_test_features)
     
     for i in range(norm_test_features.shape[0]):
@@ -259,8 +260,9 @@ def main():
                                             traffic_classes)
     
     # Plot unnormalized features
-    #profiling.plot_features(unnorm_train_features, obs_classes)
+    profiling.plot_features(unnorm_train_features, traffic_classes)
 
+    """
     # Classify using SVM
 
     y_test = classification_svm(obs_classes, norm_pca_train_features,
@@ -281,7 +283,6 @@ def main():
     print('Recall = ', recall)
     print('Accuracy = ', accuracy)
     
-    """
     # Classify using NN
 
     y_test = classification_neural_networks(obs_classes, norm_pca_train_features,

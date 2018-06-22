@@ -7,6 +7,7 @@ from sklearn.preprocessing import StandardScaler
 import sys
 import warnings
 import scalogram
+from itertools import cycle
 
 warnings.filterwarnings('ignore')
 
@@ -44,15 +45,15 @@ def get_obs_classes(traffic_samples_number, n_elems, traffic_classes):
         [np.ones((traffic_samples_number[t], n_elems)) * t for t in traffic_classes])
 
 
-def plot_features(features, obs_classes, feature1_idx=0, feature2_idx=1):
+def plot_features(features, traffic_classes, feature1_idx=0, feature2_idx=1):
     n_obs_windows, n_features = features.shape
-    colors = ['aqua', 'azure', 'black', 'brown', 'darkblue', 'darkgreen',
-              'fuchsia', 'gold', 'indigo']
+    cycol = cycle('bgrcmk')
 
     for i in range(n_obs_windows):
         plt.plot(features[i, feature1_idx], features[i, feature2_idx],
-                 'o', c=colors[int(obs_classes[i])])
-
+                 'o', c=next(cycol))
+    plt.legend(traffic_classes.values())
+    plt.grid(True)
     plt.show()
 
 
