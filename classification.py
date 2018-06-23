@@ -170,7 +170,6 @@ def improve_classification_history(traffic_samples, traffic_idx, window_size=40,
             c = classify_aggregation_window(traffic_idx[i:ts], threshold)
             traffic_idx[i:ts] = c
     
-
     return traffic_idx
 
 
