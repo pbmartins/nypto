@@ -1,5 +1,15 @@
 ## "Offline" model (master branch)
 
+### Best model with 31 classes (window size: 6 min, window slide: 20s, window aggregation: 40, threshold: 0.60) - Random forests for global model and SVM SVC for silence avaliation
+
+True positives =  1702  
+False negatives =  1121  
+False positives =  111  
+True negatives =  10422  
+Precision =  0.9387755102040817  
+Recall =  0.6029047113000354  
+Accuracy =  0.9077568134171907  
+
 ### Default model with 39 classes (window size: 2 min, window slide: 20s, window aggregation: 1) - SVM SVC
 
 True positives =  1201  
@@ -72,10 +82,10 @@ Confusion Matrix:
  13   0.0   0.0   0.0   0.0   0.0   0.0  10.0   5.0   0.0   1.0   0.0 167.0   0.0   0.0 
 ```
 
-True positives =  967
-False negatives =  127
-False positives =  0
-True negatives =  9619
-Precision =  1.0
-Recall =  0.8839122486288848
-Accuracy =  0.9881452440959582
+True positives =  967  
+False negatives =  127  
+False positives =  0  
+True negatives =  9619  
+Precision =  1.0  
+Recall =  0.8839122486288848  
+Accuracy =  0.9881452440959582  

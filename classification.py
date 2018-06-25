@@ -1,6 +1,7 @@
 from sklearn import svm
 from sklearn.cluster import DBSCAN
 from sklearn.cluster import KMeans
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.externals import joblib
 from sklearn.metrics import confusion_matrix
 from sklearn.neural_network import MLPClassifier
@@ -95,6 +96,26 @@ def classification_clustering(traffic_classes, obs_classes, norm_pca_features,
     return traffic_idx
 
 
+def classification_random_forests(obs_classes, norm_features, norm_test_features,
+                                  max_depth=2):
+    traffic_idx = {}
+
+    # Save model
+    #clf = RandomForestClassifier(max_depth, random_state=0)
+    #clf.fit(norm_features, obs_classes)
+    #joblib.dump(clf, 'classification-model/classification_model_rf.sav')
+
+    # Load model
+    clf = joblib.load('classification-model/classification_model_rf.sav')
+
+    result = clf.predict(norm_test_features)
+
+    for i in range(norm_test_features.shape[0]):
+        traffic_idx[i] = result[i]
+
+    return traffic_idx
+
+
 def classification_svm(obs_classes, norm_features,
                        norm_test_features, mode=0):
     traffic_idx = {}
@@ -106,13 +127,29 @@ def classification_svm(obs_classes, norm_features,
         3: {'name': 'Linear SVC', 'func': svm.LinearSVC()}
     }
 
-    modes[mode]['func'].fit(norm_features, obs_classes)
-
     # Save model
-    joblib.dump(modes[mode]['func'], 'classification-model/classification_model.sav')
+    #modes[mode]['func'].fit(norm_features, obs_classes)
+    #joblib.dump(modes[mode]['func'], 'classification-model/classification_model_svm.sav')
+
+    # Load model
+    modes[mode]['func'] = joblib.load('classification-model/classification_model_svm.sav')
 
     result = modes[mode]['func'].predict(norm_test_features)
     
+    for i in range(norm_test_features.shape[0]):
+        traffic_idx[i] = result[i]
+
+    return traffic_idx
+
+
+def classification_silence(norm_test_features):
+    traffic_idx = {}
+
+    # Load model
+    clf = joblib.load('classification-model/classification_model_svm_silence.sav')
+
+    result = clf.predict(norm_test_features)
+
     for i in range(norm_test_features.shape[0]):
         traffic_idx[i] = result[i]
 
@@ -169,7 +206,7 @@ def improve_classification_history(traffic_samples, traffic_idx, window_size=40,
         if ts - i > 0:
             c = classify_aggregation_window(traffic_idx[i:ts], threshold)
             traffic_idx[i:ts] = c
-    
+
     return traffic_idx
 
 
@@ -241,10 +278,10 @@ def main():
 
     with open('profiled-data/input_data.pkl', 'wb') as output:
         pickle.dump(d, output, pickle.HIGHEST_PROTOCOL)
-    
+
     """
     # Load saved profiled data
-    
+
     with open('profiled-data/input_data.pkl', 'rb') as input:
         d = pickle.load(input)
 
@@ -254,12 +291,42 @@ def main():
     norm_pca_test_features = d['norm_test']
     traffic_classes = d['classes']
     traffic_samples_number = d['samples_number']
-    
+
     obs_classes = profiling.get_obs_classes(traffic_samples_number, 1,
                                             traffic_classes)
-    
+
     # Plot unnormalized features
-    profiling.plot_features(unnorm_train_features, traffic_classes)
+    #profiling.plot_features(unnorm_train_features, traffic_classes)
+
+    # Classify using two models
+
+    # First default model
+    y_test_model1 = classification_random_forests(obs_classes, norm_pca_train_features,
+                                       norm_pca_test_features, max_depth=2)
+
+    # Perform window aggregation
+    y_test_model1 = improve_classification_history(traffic_samples_number, y_test_model1)
+
+    possible_mining = [i for i, x in enumerate(y_test_model1) if x >= 13]
+
+    # Silence model
+    y_test_model2 = classification_silence(norm_pca_test_features[:, 24:32])
+
+    y_test_final = [y_test_model2[i] if i in possible_mining else y_test_model1[i]
+              for i in range(len(y_test_model1))]
+
+    cm = confusion_matrix(obs_classes, y_test_final)
+
+    # Compute performance scores
+    tp, fn, fp, tn, precision, recall, accuracy = binary_scores(cm, 13, 31)
+
+    print('True positives = ', tp)
+    print('False negatives = ', fn)
+    print('False positives = ', fp)
+    print('True negatives = ', tn)
+    print('Precision = ', precision)
+    print('Recall = ', recall)
+    print('Accuracy = ', accuracy)
 
     """
     # Classify using SVM
@@ -303,6 +370,7 @@ def main():
     print('Recall = ', recall)
     print('Accuracy = ', accuracy)
     """
+
 
 if __name__ == '__main__':
     main()
