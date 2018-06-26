@@ -1,8 +1,8 @@
-![Nypto Logo](https://imgur.com/a/SF0ttbA)
+![Nypto Logo](https://i.imgur.com/FrCFsYj.png)
 
 **Nypto** is a network monitoring solution that detects cryptomining activities that may or not be hidden on the local machines. It is intented to be running in strategic places (Linux appliances on access switches mirroring ports as depicted in the example architecture below) and its impact on the network is negligible.
 
-![Nypto Architecture](https://imgur.com/2T4lqTE)
+![Nypto Architecture](https://i.imgur.com/2T4lqTE.png)
 
 # Models
 
@@ -68,16 +68,19 @@ These features are also normalized and processed by PCA.
 
 | Classification techniques | Nº Classes | Window size  (slide) | Window Aggr. (threshold) | True positives | False negatives | False positives | True negatives | Precision | Recall | Accuracy |
 |:--------------------------------------------------------:|:----------:|:--------------------:|:------------------------:|:--------------:|:---------------:|:---------------:|:--------------:|:---------:|:------:|:--------:|
-| Random forests (global model) /  SVM SVC (silence model) | 31 | 6 min (20 s) | 40 (0.6) | 1702 | 1121 | 111 | 10422 | 0.9388 | 0.6029 | 0.9078 |
+| Random forests (global model) /  SVM SVC (silence model) | 31 | 6 min (20 s) | 40 (0.60) | 1702 | 1121 | 111 | 10422 | 0.9388 | 0.6029 | 0.9078 |
 | SVM SVC (global model) | 39 | 2 min (20 s) | 1 | 1201 | 1455 | 704 | 11469 | 0.6304 | 0.4522 | 0.8544 |
 | SVM SVC (global model) | 39 | 2 min (20 s) | 40 (0.55) | 1269 | 1452 | 636 | 11472 | 0.6661 | 0.4664 | 0.8592 |
 | SVM SVC (global model) | 39 | 6 min (20 s) | 40 (0.60) | 1189 | 845 | 624 | 11863 | 0.6558 | 0.5846 | 0.8988 |
 
-## Live filtering model with window aggregation (live-filtering branch) 
+## Live filtering model
 
-### Binary classification with 2 aggregated classes (window aggregation: 50, threshold: 0.55) - SVM Linear SVC
+| Classification techniques | Nº Classes | Window size  (slide) | Window Aggr. (threshold) | True positives | False negatives | False positives | True negatives | Precision | Recall | Accuracy |
+|:-------------------------:|:----------:|:--------------------:|:------------------------:|:--------------:|:---------------:|:---------------:|:--------------:|:---------:|:------:|:--------:|
+| SVM Linear SVC (binary classsification) | 2 | 2 min (20 s) | 50 (0.55) | 714 | 98 | 297 | 9704 | 0.7062 | 0.8793 | 0.9635 |
+| SVM SVC (global model) | 13 | 6 min (20 s) | 70 (0.55) | 967 | 127 | 0 | 9619 | 1.0 | 0.8839 | 0.9881 |
 
-Confusion Matrix:
+### Binary classification Confusion Matrix
 
 ```
     0       1
@@ -85,17 +88,7 @@ Confusion Matrix:
 1  98.0  9704.0
 ```
 
-True positives =  714  
-False negatives =  98  
-False positives =  297  
-True negatives =  9704  
-Precision =  0.7062314540059347  
-Recall =  0.8793103448275862  
-Accuracy =  0.9634698973457875  
-
-### All classes with binary results (window size: 6 min, window slide: 20s, window aggregation: 70, threshold: 0.55) - SVM SVC
-
-Confusion Matrix:
+### 13 classes Confusion Matrix
 
 ```
         0     1     2     3     4     5     6     7     8     9    10    11    12    13 
@@ -115,10 +108,6 @@ Confusion Matrix:
  13   0.0   0.0   0.0   0.0   0.0   0.0  10.0   5.0   0.0   1.0   0.0 167.0   0.0   0.0 
 ```
 
-True positives =  967  
-False negatives =  127  
-False positives =  0  
-True negatives =  9619  
-Precision =  1.0  
-Recall =  0.8839122486288848  
-Accuracy =  0.9881452440959582  
+
+Diogo Ferreira & Pedro Martins - 2018
+
