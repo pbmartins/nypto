@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="https://i.imgur.com/FrCFsYj.png" width="220px">
+    <img src="https://i.imgur.com/FrCFsYj.png" width="550px">
 </p>
 <h1 align="center">Nypto</h1>
 <p align="center">Cryptojacking detection through pure network monitoring.</p>
