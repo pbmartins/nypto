@@ -1,11 +1,8 @@
-![Nypto Logo](https://i.imgur.com/FrCFsYj.png)
-
 <p align="center">
-    <img src="https://i.imgur.com/2T4lqTE.png" width="200px">
+    <img src="https://i.imgur.com/FrCFsYj.png" width="220px">
 </p>
 <h1 align="center">Nypto</h1>
 <p align="center">Cryptojacking detection through pure network monitoring.</p>
-
 
 <p align="center">
     <a href="./LICENSE.md"><img src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
@@ -13,13 +10,15 @@
 
 <br/>
 
-<img src="https://i.imgur.com/2T4lqTE.png" width="40%" align="right"/>
+<img src="https://i.imgur.com/2T4lqTE.png" width="60%" align="right"/>
 
 **Nypto** is a network monitoring solution that detects cryptomining activities 
 that may or not be hidden on the local machines. It is intented to be running 
 in strategic places (Linux appliances on access switches mirroring ports as 
 depicted in the example architecture on the side) and its impact on the 
 network is negligible.
+
+Feel free to contribute by leaving your pull requests!
 
 <br/>
 
