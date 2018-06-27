@@ -1,36 +1,121 @@
-## "Offline" model (master branch)
+<p align="center">
+    <img src="https://i.imgur.com/FrCFsYj.png" width="550px">
+</p>
+<h1 align="center">Nypto</h1>
+<p align="center">Cryptojacking detection through pure network monitoring.</p>
 
-Window size = 2 minutes  
-Sliding time = 20 seconds
+<p align="center">
+    <a href="./LICENSE.md"><img src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+</p>
 
-### Default model with 39 classes (window aggregation: 1) - SVM SVC
+<br/>
 
-True positives =  1201  
-False negatives =  1455  
-False positives =  704  
-True negatives =  11469  
-Precision =  0.6304461942257218  
-Recall =  0.45218373493975905  
-Accuracy =  0.8544069053880909  
+<img src="https://i.imgur.com/2T4lqTE.png" width="60%" align="right"/>
 
-### Default model with 39 classes (window aggregation: 40, threshold: 0.55) - SVM SVC
+**Nypto** is a network monitoring solution that detects cryptomining activities 
+that may or not be hidden on the local machines. It is intented to be running 
+in strategic places (Linux appliances on access switches mirroring ports as 
+depicted in the example architecture on the side) and its impact on the 
+network is negligible.
 
-True positives =  1269  
-False negatives =  1452  
-False positives =  636  
-True negatives =  11472  
-Precision =  0.6661417322834645  
-Recall =  0.4663726571113561  
-Accuracy =  0.8591948209589318  
+Feel free to contribute by leaving your pull requests!
 
-## Live filtering model with window aggregation (live-filtering branch) 
+<br/>
 
-### Binary classification (2 aggregated classes) - SVM Linear SVC
+# Models
 
-Window size = 2 minutes  
-Sliding time = 20 seconds
+**Nypto** is divided in two models:
 
-Confusion Matrix:
+* 🔸 *Offline model* (master branch): this model is heavily optimized to work 
+on the given datasets and it is not prepared to work on a live scenario, when 
+packets are captured and classified on the go. However, it has a wider range on 
+scenarios, which particularly included traffic mixes of different classes, 
+making the classification results less precise.
+* 🔹 *Live-filtering model* (live-filtering branch): this model is simpler than 
+the previous one, not including any type of mixed classes, and is prepared for 
+live capturing and classification of packets.
+
+# Datasets
+
+Many traces of various traffic classes were obtained to make this models 
+realistic in today's internet reality:
+
+* YouTube 🔸🔹
+* Netflix 🔸🔹
+* Browsing 🔸🔹
+* Social Networking 🔸🔹
+* Email 🔸🔹
+* VPN tunneling (Netflix, YouTube, CPU Mining 2&4 threads) 🔸🔹
+* CPU Mining (2&4 threads mining Neoscrypt) 🔸🔹
+* GPU Mining (EquiHash - 60% usage on GTX 1070 and 85%-100% on GTX 1080Ti) 🔸🔹
+* Normal traffic mixes 🔸
+    - Browsing & Netflix 🔸
+    - Browsing & Social Networking 🔸
+    - Browsing & Youtube 🔸
+    - Netflix & Social Networking 🔸
+    - Netflix & YouTube 🔸
+    - Social Networking & YouTube 🔸
+* Mining traffic mixes 🔸
+    - CPU Mining (2&4 threads mining Neoscrypt) & Browsing
+    - CPU Mining (2&4 threads mining Neoscrypt) & Netflix
+    - CPU Mining (2&4 threads mining Neoscrypt) & Social Networking
+    - CPU Mining (2&4 threads mining Neoscrypt) & YouTube
+    - GPU Mining (EquiHash - 60% usage on GTX 1070 and 85% and 100% on GTX 1080Ti) & Browsing 🔸
+    - GPU Mining (EquiHash - 60% usage on GTX 1070 and 85% and 100% on GTX 1080Ti) & Netflix 🔸
+    - GPU Mining (EquiHash - 60% usage on GTX 1070 and 85% and 100% on GTX 1080Ti) & Social Networking 🔸
+    - GPU Mining (EquiHash - 60% usage on GTX 1070 and 85% and 100% on GTX 1080Ti) & YouTube 🔸
+
+
+In order to download the original used traces, please use the following 
+[link](https://mega.nz/#F!aOYhRCoA!z5W4sWXZcFyqgKhATsMvNQ).
+
+# Files
+
+* `parse_packets.py`: Obtains packet counts (number of download/upload bytes 
+and packets) from Wireshark captures and writes them to a text file;
+* `generate_merge_datasets.py`: Generates new dataset, resultant from the merge 
+of a set of given datasets;
+* `scalogram.py`: Returns Scalograms/Wavelets features from a given time window;
+* `profiling.py`: Breaks the datasets into multiple windows (sliding windows), 
+obtains its features and returns a single NumPy matriz for each type of feature,
+which includes all datasets;
+* `classification.py`: Classifies windows using machine learning algorithms 
+and shows the user those results;
+* `filtering.py`: Live capture and filtering of traffic, using the models created
+by `classification.py`.
+
+# Profiling
+
+Each window has a set of features that were extracted:
+* Upload/download packet and bytes count average;
+* Upload/download packet and bytes count median;
+* Upload/download packet and bytes count standard deviation;
+* Upload/download packet and bytes count 75, 90 and 95 percentils;
+* Upload/download packet and bytes silent periods average;
+* Upload/download packet and bytes silent periods variance;
+* Upload/download packet and bytes scalograms (scales 2 and 4).
+
+These features are also normalized and processed by PCA.
+
+# Classification
+
+## "Offline" model
+
+| Classification techniques | Nº Classes | Window size  (slide) | Window Aggr. (threshold) | True positives | False negatives | False positives | True negatives | Precision | Recall | Accuracy |
+|:--------------------------------------------------------:|:----------:|:--------------------:|:------------------------:|:--------------:|:---------------:|:---------------:|:--------------:|:---------:|:------:|:--------:|
+| SVM SVC (global model) | 39 | 2 min (20 s) | 1 | 1201 | 1455 | 704 | 11469 | 0.6304 | 0.4522 | 0.8544 |
+| SVM SVC (global model) | 39 | 2 min (20 s) | 40 (0.55) | 1269 | 1452 | 636 | 11472 | 0.6661 | 0.4664 | 0.8592 |
+| SVM SVC (global model) | 39 | 6 min (20 s) | 40 (0.60) | 1189 | 845 | 624 | 11863 | 0.6558 | 0.5846 | 0.8988 |
+| Random forests (global model) /  SVM SVC (silence model) | 31 | 6 min (20 s) | 40 (0.60) | 1702 | 1121 | 111 | 10422 | 0.9388 | 0.6029 | 0.9078 |
+
+## Live filtering model
+
+| Classification techniques | Nº Classes | Window size  (slide) | Window Aggr. (threshold) | True positives | False negatives | False positives | True negatives | Precision | Recall | Accuracy |
+|:-------------------------:|:----------:|:--------------------:|:------------------------:|:--------------:|:---------------:|:---------------:|:--------------:|:---------:|:------:|:--------:|
+| SVM Linear SVC (binary classsification) | 2 | 2 min (20 s) | 50 (0.55) | 714 | 98 | 297 | 9704 | 0.7062 | 0.8793 | 0.9635 |
+| SVM SVC (global model) | 13 | 6 min (20 s) | 70 (0.55) | 967 | 127 | 0 | 9619 | 1.0 | 0.8839 | 0.9881 |
+
+### Binary classification Confusion Matrix
 
 ```
     0       1
@@ -38,20 +123,7 @@ Confusion Matrix:
 1  98.0  9704.0
 ```
 
-True positives =  714  
-False negatives =  98  
-False positives =  297  
-True negatives =  9704  
-Precision =  0.7062314540059347  
-Recall =  0.8793103448275862  
-Accuracy =  0.9634698973457875  
-
-### All classes with binary results (window aggregation: 70, threshold: 0.55) - SVM SVC
-
-Window size = 6 minutes  
-Sliding time = 20 seconds  
-
-Confusion Matrix:
+### 13 classes Confusion Matrix
 
 ```
         0     1     2     3     4     5     6     7     8     9    10    11    12    13 
@@ -71,10 +143,6 @@ Confusion Matrix:
  13   0.0   0.0   0.0   0.0   0.0   0.0  10.0   5.0   0.0   1.0   0.0 167.0   0.0   0.0 
 ```
 
-True positives =  967
-False negatives =  127
-False positives =  0
-True negatives =  9619
-Precision =  1.0
-Recall =  0.8839122486288848
-Accuracy =  0.9881452440959582
+
+Diogo Ferreira & Pedro Martins - 2018
+

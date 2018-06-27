@@ -67,18 +67,11 @@ def classify(local_ip, remote_port):
     src_idx = LOCAL_IPS[local_ip]
     port_idx = TCP_PORTS[remote_port]
 
-    #print("DST PORT -> {}".format(remote_port))
-    #print(TRAFFIC_STATS[src_idx][port_idx])
-
     # Traffic profiling
     dataset = TRAFFIC_STATS[src_idx][port_idx][:, 1:]
-    #print("DATASET: ", dataset)
     f, fs, fw = extract_live_features(dataset)
-    #print("ANALYTICS FEATURES: ", f)
     all_features = np.hstack((f, fs, fw))
     all_features = np.nan_to_num(all_features)
-    #print("ALL FEATURES SHAPE", all_features.shape)
-    #print("ALL FEATURES", all_features)
     
     # Less than 3 valid windows, cannot extract features with PCA
     if all_features.shape[0] < 3:
@@ -87,7 +80,6 @@ def classify(local_ip, remote_port):
         return -1
 
     norm_pca_features = normalize_live_features(all_features)
-    #print("PCA FEATURES SHAPE", norm_pca_features.shape)
 
     # Traffic classification
     classes = classify_live_data(norm_pca_features)
@@ -125,9 +117,6 @@ def pkt_callback(pkt):
         src_port = pkt.tcp.srcport
         dst_port = pkt.tcp.dstport
         size = int(pkt.ip.get_field('Len'))
-
-    if src_ip == IPAddress('94.63.100.39') or dst_ip == IPAddress('94.63.100.39'):
-        return
 
     # Verify if it's a valid IP prefix
     if src_ip in CLIENT_NETS_SET:

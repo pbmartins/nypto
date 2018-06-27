@@ -1,6 +1,7 @@
 from sklearn import svm
 from sklearn.cluster import DBSCAN
 from sklearn.cluster import KMeans
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.externals import joblib
 from sklearn.metrics import confusion_matrix
 from sklearn.neural_network import MLPClassifier
@@ -8,6 +9,7 @@ from scipy.stats import multivariate_normal
 from collections import Counter
 import numpy as np
 import pickle
+import argparse
 import profiling
 
 
@@ -95,9 +97,31 @@ def classification_clustering(traffic_classes, obs_classes, norm_pca_features,
     return traffic_idx
 
 
-def classification_svm(obs_classes, norm_features,
+def classification_random_forests(new_model, obs_classes, norm_features, 
+                                  norm_test_features, max_depth=2):
+    traffic_idx = {}
+
+    if new_model:
+        # Save model
+        clf = RandomForestClassifier(max_depth, random_state=0)
+        clf.fit(norm_features, obs_classes)
+        joblib.dump(clf, 'classification-model/classification_model_rf.sav')
+    else:
+        # Load model
+        clf = joblib.load('classification-model/classification_model_rf.sav')
+
+    result = clf.predict(norm_test_features)
+
+    for i in range(norm_test_features.shape[0]):
+        traffic_idx[i] = result[i]
+
+    return traffic_idx
+
+
+def classification_svm(new_model, obs_classes, norm_features,
                        norm_test_features, mode=0):
     traffic_idx = {}
+
     modes = {
         0: {'name': 'SVC', 'func': svm.SVC(kernel='linear')},
         1: {'name': 'Kernel RBF', 'func': svm.SVC(kernel='rbf')},
@@ -105,11 +129,16 @@ def classification_svm(obs_classes, norm_features,
         3: {'name': 'Linear SVC', 'func': svm.LinearSVC()}
     }
 
-    modes[mode]['func'].fit(norm_features, obs_classes)
+    if new_model:
+        # Save model
+        modes[mode]['func'].fit(norm_features, obs_classes)
+        joblib.dump(modes[mode]['func'], 
+                    'classification-model/classification_model_svm.sav')
+    else:
+        # Load model
+        modes[mode]['func'] = \
+                joblib.load('classification-model/classification_model_svm.sav')
 
-    # Save model
-    joblib.dump(modes[mode]['func'], 'classification-model/classification_model.sav')
-    
     result = modes[mode]['func'].predict(norm_test_features)
     
     for i in range(norm_test_features.shape[0]):
@@ -118,22 +147,40 @@ def classification_svm(obs_classes, norm_features,
     return traffic_idx
 
 
-def classification_neural_networks(obs_classes, norm_pca_features,
+def classification_silence(norm_test_features):
+    traffic_idx = {}
+
+    # Load model
+    clf = joblib.load('classification-model/classification_model_svm_silence.sav')
+
+    result = clf.predict(norm_test_features)
+
+    for i in range(norm_test_features.shape[0]):
+        traffic_idx[i] = result[i]
+
+    return traffic_idx
+
+
+def classification_neural_networks(new_model, obs_classes, norm_pca_features,
                                    norm_pca_test_features, alpha=0.1,
                                    max_iter=100000, hidden_layer_size=1000):
-
     traffic_idx = {}
-    clf = MLPClassifier(
-        solver='sgd',
-        alpha=alpha,
-        hidden_layer_sizes=(hidden_layer_size,),
-        max_iter=max_iter
-    )
-    clf.fit(norm_pca_features, obs_classes)
 
-    # Save model
-    joblib.dump(clf, 'classification-model/classification_model.sav')
-    
+    if new_model:
+        clf = MLPClassifier(
+            solver='sgd',
+            alpha=alpha,
+            hidden_layer_sizes=(hidden_layer_size,),
+            max_iter=max_iter
+        )
+        clf.fit(norm_pca_features, obs_classes)
+
+        # Save model
+        joblib.dump(clf, 'classification-model/classification_model.sav')
+    else:
+        clf = joblib.load('classification-model/classification_model.sav')
+
+
     result = clf.predict(norm_pca_test_features)
 
     for i in range(norm_pca_test_features.shape[0]):
@@ -168,7 +215,6 @@ def improve_classification_history(traffic_samples, traffic_idx, window_size=70,
         if ts - i > 0:
             c = classify_aggregation_window(traffic_idx[i:ts], threshold)
             traffic_idx[i:ts] = c
-    
 
     return traffic_idx
 
@@ -188,7 +234,6 @@ def binary_scores(conf_matrix, change_class, max_class):
 def classify_live_data(norm_pca_features):
     model = joblib.load('classification-model/classification_model.sav')
     result = model.predict(norm_pca_features)
-    print(result)
 
     not_mining = len([r for r in result if r < 7])
     classes = {
@@ -222,88 +267,104 @@ def print_cm(cm, labels, hide_zeroes=False, hide_diagonal=False, hide_threshold=
         print()
 
 
+def print_results(confusion_matrix, mining_idx_start, mining_idx_end):
+    # Compute performance scores
+    tp, fn, fp, tn, precision, recall, accuracy = binary_scores(
+            confusion_matrix, mining_idx_start, mining_idx_end)
+
+    print('True positives = ', tp)
+    print('False negatives = ', fn)
+    print('False positives = ', fp)
+    print('True negatives = ', tn)
+    print('Precision = ', precision)
+    print('Recall = ', recall)
+    print('Accuracy = ', accuracy)
+
+
 def main():
-    """
-    # Generate new profiled data
-    unnorm_train_features, unnorm_test_features, \
-    norm_pca_train_features, norm_pca_test_features, \
-    traffic_classes, traffic_samples_number = profiling.profiling()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-p', '--profile', action='store_true', default=False,
+            help='generate new profiling data (default: false)')
+    parser.add_argument('-c', '--classification', action='store_true', 
+            default=False, help='generate new classification model (default:false)')
+    parser.add_argument('-m', '--method', nargs='?', default=0, type=int,
+            help='classification method - 0:Multimethod | 1:SVM | 2: NN (default: 0)')
+    args = parser.parse_args()
 
-    # Save profiling data
-    d = {
-        'unnorm_train': unnorm_train_features,
-        'unnorm_test': unnorm_test_features,
-        'norm_train': norm_pca_train_features,
-        'norm_test': norm_pca_test_features,
-        'classes': traffic_classes,
-        'samples_number': traffic_samples_number
-    }
+    if args.profiling:
+        # Generate new profiled data
+        unnorm_train_features, unnorm_test_features, \
+        norm_pca_train_features, norm_pca_test_features, \
+        traffic_classes, traffic_samples_number = profiling.profiling()
 
-    with open('profiled-data/input_data.pkl', 'wb') as output:
-        pickle.dump(d, output, pickle.HIGHEST_PROTOCOL)
-    
-    """
-    # Load saved profiled data
-    
-    with open('profiled-data/input_data.pkl', 'rb') as input:
-        d = pickle.load(input)
+        # Save profiling data
+        d = {
+            'unnorm_train': unnorm_train_features,
+            'unnorm_test': unnorm_test_features,
+            'norm_train': norm_pca_train_features,
+            'norm_test': norm_pca_test_features,
+            'classes': traffic_classes,
+            'samples_number': traffic_samples_number
+        }
 
-    unnorm_train_features = d['unnorm_train']
-    unnorm_test_features = d['unnorm_test']
-    norm_pca_train_features = d['norm_train']
-    norm_pca_test_features = d['norm_test']
-    traffic_classes = d['classes']
-    traffic_samples_number = d['samples_number']
-    
-    
+        with open('profiled-data/input_data.pkl', 'wb') as output:
+            pickle.dump(d, output, pickle.HIGHEST_PROTOCOL)
+
+    else:
+        # Load saved profiled data
+        with open('profiled-data/input_data.pkl', 'rb') as input:
+            d = pickle.load(input)
+
+        unnorm_train_features = d['unnorm_train']
+        unnorm_test_features = d['unnorm_test']
+        norm_pca_train_features = d['norm_train']
+        norm_pca_test_features = d['norm_test']
+        traffic_classes = d['classes']
+        traffic_samples_number = d['samples_number']
+
     obs_classes = profiling.get_obs_classes(traffic_samples_number, 1,
                                             traffic_classes)
-   
+
     # Plot unnormalized features
-    #profiling.plot_features(unnorm_train_features, obs_classes)
+    #profiling.plot_features(unnorm_train_features, traffic_classes)
 
-    # Classify using SVM
+    if args.method == 0:
+        # Classify using two models
+        # First default model
+        y_test_model1 = classification_random_forests(
+                args.classification, obs_classes, norm_pca_train_features,
+                norm_pca_test_features, max_depth=2)
 
-    y_test = classification_svm(obs_classes, norm_pca_train_features,
-                                             norm_pca_test_features, mode=0)
-    y_test = improve_classification_history(traffic_samples_number, y_test)
+        # Perform window aggregation
+        y_test_model1 = improve_classification_history(
+                traffic_samples_number, y_test_model1)
+
+        possible_mining = [i for i, x in enumerate(y_test_model1) if x >= 13]
+
+        # Silence model
+        y_test_model2 = classification_silence(norm_pca_test_features[:, 24:32])
+
+        y_test = [y_test_model2[i] if i in possible_mining else y_test_model1[i]
+                  for i in range(len(y_test_model1))]
+
+    elif args.method == 1:
+        # Classify using SVM
+        y_test = classification_svm(args.classification, obs_classes, 
+                                    norm_pca_train_features,
+                                    norm_pca_test_features, mode=0)
+        y_test = improve_classification_history(traffic_samples_number, y_test)
+
+    elif args.method == 2:
+        # Classify using NN
+        y_test = classification_neural_networks(
+                args.classification, obs_classes, 
+                norm_pca_train_features, norm_pca_test_features)
+        y_test = improve_classification_history(traffic_samples_number, y_test)
 
     cm = confusion_matrix(obs_classes, y_test)
-    print_cm(cm, [str(i) for i in list(range(0, 14))])
+    print_results(cm, 7, 13)
 
-    # Compute performance scores
-    tp, fn, fp, tn, precision, recall, accuracy = binary_scores(cm, 7, 13)
 
-    print('True positives = ', tp)
-    print('False negatives = ', fn)
-    print('False positives = ', fp)
-    print('True negatives = ', tn)
-    print('Precision = ', precision)
-    print('Recall = ', recall)
-    print('Accuracy = ', accuracy)
-    
-    """
-    # Classify using NN
-
-    y_test = classification_neural_networks(obs_classes, norm_pca_train_features,
-                                            norm_pca_test_features)
-    y_test = improve_classification_history(traffic_samples_number, y_test)
-
-    # Print confusion matrix
-    cm = confusion_matrix(obs_classes, y_test)
-    print_cm(cm, [str(i) for i in list(range(0, 14))])
-
-    # Compute performance scores
-    tp, fn, fp, tn, precision, recall, accuracy = binary_scores(cm, 13, 39)
-
-    print('True positives = ', tp)
-    print('False negatives = ', fn)
-    print('False positives = ', fp)
-    print('True negatives = ', tn)
-    print('Precision = ', precision)
-    print('Recall = ', recall)
-    print('Accuracy = ', accuracy)
-    """
 
 if __name__ == '__main__':
     main()
