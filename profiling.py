@@ -97,8 +97,6 @@ def extract_features(data):
                 mean,
                 np.median(data[i, :, :], axis=0),
                 np.std(data[i, :, :], axis=0),
-                #stats.skew(data[i, :, :]),
-                #stats.kurtosis(data[i, :, :]),
                 np.array(np.percentile(data[i, :, :], percentils, axis=0)).T.flatten(),
             )))
     return empty_windows, np.array(features)

@@ -67,16 +67,10 @@ def classify(local_ip, remote_port):
     src_idx = LOCAL_IPS[local_ip]
     port_idx = TCP_PORTS[remote_port]
 
-    #print("DST PORT -> {}".format(remote_port))
-    #print(TRAFFIC_STATS[src_idx][port_idx])
-
     # Traffic profiling
     dataset = TRAFFIC_STATS[src_idx][port_idx][:, 1:]
-    #print("DATASET: ", dataset)
     f, fs, fw = extract_live_features(dataset)
-    #print("ANALYTICS FEATURES: ", f)
     all_features = np.hstack((f, fs, fw))
-    #print("ALL FEATURES SHAPE", all_features.shape)
 
     # Less than 3 valid windows, cannot extract features with PCA
     if all_features.shape[0] < 3:
@@ -85,7 +79,6 @@ def classify(local_ip, remote_port):
         return -1
 
     norm_pca_features = normalize_live_features(all_features)
-    #print("PCA FEATURES SHAPE", norm_pca_features.shape)
 
     # Traffic classification
     classes = classify_live_data(norm_pca_features)
